@@ -232,7 +232,7 @@ def render_copy_paste_ascii(config: SwarmConfig, *, sanitize_pii: bool = True) -
         lines.append(f"| {_wrap_fixed_pure_ascii(flow_str, inner - 2)} |")
         lines.append(f"+{'-' * inner}+")
 
-    footer = "[Shared via Hermes MySwarm Plugin | PII-Pruned]"
+    footer = "[Shared via Hermes MySwarm Plugin]"
     lines.append(footer.rjust(width))
     return "\n".join(lines)
 

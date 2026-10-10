@@ -6,11 +6,11 @@
 
 1. **Abbreviated Agent List (`myswarm_list` / `/myswarm list`)**
    Parses `agents.md` / `AGENTS.md` / `AGENTS.override.md` and outputs a concise table of agents, their abbreviated personas, their goals, and orchestrator/specialist roles.
-2. **PII-Pruned ASCII Swarm Topology (`myswarm_ascii` / `/myswarm ascii`)**
-   Automatically runs the full 2-stage PII pruning pipeline first, then out of the box renders **both** a vector SVG image (`myswarm-ascii.svg`) **and** a social-media-ready PNG image (`myswarm-ascii.png`) of your ASCII swarm diagram, a box-and-arrow topology diagram, **and** a ready-to-share **Easy Copy-Paste ASCII Code Block** made of pure 7-bit ASCII symbols (`+`, `-`, `|`, `===>`, role icons like `[\^/]`, `[#!#]`, `[{/}]`, `[?=?]`, stamped `[Shared via Hermes MySwarm Plugin | PII-Pruned]`).
+2. **ASCII Swarm Topology (`myswarm_ascii` / `/myswarm ascii`)**
+   Runs best-effort PII scrubbing first, then out of the box renders **both** a vector SVG image (`myswarm-ascii.svg`) **and** a social-media-ready PNG image (`myswarm-ascii.png`) of your ASCII swarm diagram, a box-and-arrow topology diagram, **and** a ready-to-share **Easy Copy-Paste ASCII Code Block** made of pure 7-bit ASCII symbols (`+`, `-`, `|`, `===>`, role icons like `[\^/]`, `[#!#]`, `[{/}]`, `[?=?]`, stamped `[Shared via Hermes MySwarm Plugin]`).
    - *Sharing Tip*: Share the **ASCII code** for a quick visual preview and lightweight starter config (1-line personas/goals + routing), and/or share the exported **`.md` file** for the comprehensive, lossless agent instructions.
 3. **AI-Generated Image Visualization (`myswarm_visualize_image` / `/myswarm image [theme]`)**
-   Uses your active default model (`ctx.llm`) and Hermes's `image_generate` tool to create an illustration of your PII-pruned agent swarm.
+   Uses your active default model (`ctx.llm`) and Hermes's `image_generate` tool to create an illustration of your agent swarm.
    - Specify a custom theme (e.g. `sci-fi`, `cyberpunk`, `solarpunk`, `steampunk`, `blueprint`), or
    - Omit the theme and let your default model automatically pick the best visual theme based on your agents' personas and goals.
 4. **PII-Cleared Markdown Export (`myswarm_export` / `/myswarm export [output.md]`)**

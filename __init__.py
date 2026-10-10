@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 MYSWARM_AGENT_SYSTEM_INSTRUCTIONS = """\
 ### MySwarm Plugin Guidelines (Sharing & Import Security)
 1. **Sharing Guidance (ASCII vs. Markdown)**:
-   - Remind users that they can share their PII-pruned **Copy-Paste ASCII code** (`myswarm_ascii`) and/or their exported **`.md` file** (`myswarm_export`).
+   - Remind users that they can share their **Copy-Paste ASCII code** (`myswarm_ascii`) and/or their exported **`.md` file** (`myswarm_export`).
    - Be transparent: the **ASCII code** is a lightweight visual diagram and starter skeleton (1-line personas/goals + routing), whereas the **exported `.md` file** is comprehensive and preserves full agent instructions verbatim.
 2. **Mandatory Pre-Import Security Protocol (Markdown `.md` AND Copy-Paste ASCII files)**:
    - Whenever a user imports a shared agent config (`myswarm_import` or `/myswarm import`), ALWAYS warn them to **only import files from sources they trust**.
@@ -38,7 +38,7 @@ def register(ctx) -> None:
         toolset="myswarm",
         schema=schemas.MYSWARM_ASCII,
         handler=handlers.myswarm_ascii,
-        description="Render a PII-pruned ASCII box-and-arrow visualization image and copy-paste ASCII block.",
+        description="Render ASCII box-and-arrow visualization images (.svg and .png) and a copy-paste ASCII block.",
         emoji="🗺️",
     )
     ctx.register_tool(

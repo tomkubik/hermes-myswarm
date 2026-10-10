@@ -108,14 +108,14 @@ def myswarm_list(args: dict, **kwargs: Any) -> str:
 
 
 SHARING_HINT = (
-    "Sharing Tip: You can share your PII-pruned ASCII code and/or your exported .md file (/myswarm export). "
+    "Sharing Tip: You can share your ASCII code and/or your exported .md file (/myswarm export). "
     "The ASCII code is great for a quick visual preview and lightweight starter config (abbreviated 1-line "
     "personas/goals + routing), while the .md file is more comprehensive and preserves full agent instructions."
 )
 
 
 def myswarm_ascii(args: dict, **kwargs: Any) -> str:
-    """Handler for myswarm_ascii tool: PII-prune agents.md, render an ASCII image, and output a copy-paste ASCII code block."""
+    """Handler for myswarm_ascii tool: render ASCII SVG & PNG images and output a copy-paste ASCII code block."""
     try:
         path = (args or {}).get("path")
         style = str((args or {}).get("style") or "unicode").strip().lower()
@@ -269,9 +269,9 @@ SLASH_HELP = """\
 
 Subcommands:
   /myswarm list [path]                  Abbreviated list of agents, personas, and goals
-  /myswarm ascii [path]                 ASCII image + PII-pruned copy-paste ASCII symbols code block
+  /myswarm ascii [path]                 ASCII images (.svg & .png) + copy-paste ASCII symbols code block
   /myswarm image [theme]                Generate an image of your swarm (e.g. sci-fi, cyberpunk, or auto)
-  /myswarm export [output.md]           Export comprehensive PII-sanitized agents.md with MySwarm Plugin header
+  /myswarm export [output.md]           Export sanitized agents.md with MySwarm Plugin header
   /myswarm import [--preview] <file>    Display file contents, run security/exploit check (.md or ASCII), & import
   /myswarm revert                       Revert back to your original agents.md
   /myswarm status                       Show active agents.md and backup/revert status
@@ -373,9 +373,8 @@ def handle_slash_command(raw_args: str, ctx: Optional[Any] = None) -> str:
             return (
                 f"{diagram}\n\n"
                 f"ASCII SVG Saved  : {svg_path}\n"
-                f"ASCII PNG Saved  : {png_path}\n"
-                f"PII Pruning      : Enabled ({san_result.total_redactions} redaction(s) applied)\n\n"
-                f"Easy Copy-Paste ASCII Code (PII-pruned — safe to paste & share anywhere):\n"
+                f"ASCII PNG Saved  : {png_path}\n\n"
+                f"Easy Copy-Paste ASCII Code:\n"
                 f"```text\n{copy_paste}\n```\n\n"
                 f"{SHARING_HINT}"
             )

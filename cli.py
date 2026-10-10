@@ -48,7 +48,7 @@ def setup_cli_argparse(subparser: argparse.ArgumentParser) -> None:
 
     p_ascii = subs.add_parser(
         "ascii",
-        help="Render ASCII visualization images (.svg and .png) AND a PII-pruned copy-paste ASCII symbols code block",
+        help="Render ASCII visualization images (.svg and .png) AND a copy-paste ASCII symbols code block",
     )
     p_ascii.add_argument("path", nargs="?", default=None, help="Optional path to agents.md or workspace directory")
     p_ascii.add_argument("--style", choices=["unicode", "ascii"], default="unicode", help="Box drawing character set")
@@ -68,7 +68,7 @@ def setup_cli_argparse(subparser: argparse.ArgumentParser) -> None:
         help="Image aspect ratio (default: landscape)",
     )
 
-    p_export = subs.add_parser("export", help="Export PII-sanitized agents.md to a shareable .md file")
+    p_export = subs.add_parser("export", help="Export sanitized agents.md to a shareable .md file")
     p_export.add_argument("output_path", nargs="?", default=None, help="Output .md file path (default: myswarm-export.md)")
     p_export.add_argument("--source", default=None, help="Optional source agents.md file or workspace directory")
     p_export.add_argument("--no-llm", action="store_true", help="Disable contextual LLM PII scrubbing pass")
@@ -116,7 +116,7 @@ def handle_cli_command(args: Any) -> int:
         if sub == "ascii":
             raw_path = getattr(args, "path", None)
             _resolved_file, workspace_dir = resolve_agents_file(raw_path)
-            cfg, san_result = load_sanitized_swarm_config(raw_path, llm=_get_llm())
+            cfg, _san_result = load_sanitized_swarm_config(raw_path, llm=_get_llm())
             diagram = render_ascii_swarm(cfg, style=getattr(args, "style", "unicode"), sanitize_pii=True)
             copy_paste = render_copy_paste_ascii(cfg, sanitize_pii=True)
             raw_img_out = getattr(args, "image_out", None)
@@ -135,8 +135,7 @@ def handle_cli_command(args: Any) -> int:
             print(diagram)
             print(f"\nASCII SVG Saved  : {saved_svg}")
             print(f"ASCII PNG Saved  : {saved_png}")
-            print(f"PII Pruning      : Enabled ({san_result.total_redactions} redaction(s) applied)")
-            print("\nEasy Copy-Paste ASCII Code (PII-pruned — safe to paste & share anywhere):")
+            print("\nEasy Copy-Paste ASCII Code:")
             print(f"```text\n{copy_paste}\n```")
             print(f"\n{SHARING_HINT}")
             return 0

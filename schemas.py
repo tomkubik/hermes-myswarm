@@ -34,7 +34,7 @@ MYSWARM_LIST = {
 MYSWARM_ASCII = {
     "name": "myswarm_ascii",
     "description": (
-        "Create a PII-pruned ASCII visualization of the user's agent swarm setup from agents.md. "
+        "Create an ASCII visualization of the user's agent swarm setup from agents.md. "
         "Out of the box, this tool automatically renders BOTH a vector SVG image (`ascii_svg_path` / `ascii_image_path`) "
         "AND a social-media-ready PNG image (`ascii_png_path`) of the ASCII diagram, in addition to producing "
         "an easy copy-paste ASCII code block (`copy_paste_ascii` / `copy_paste_code_block`) "
