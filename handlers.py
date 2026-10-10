@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import shlex
+from pathlib import Path
 from typing import Any, List, Optional
 
 try:
@@ -18,6 +19,7 @@ try:
     from .visualizer import (
         generate_swarm_image,
         render_ascii_swarm,
+        render_ascii_to_png_image,
         render_ascii_to_svg_image,
         render_copy_paste_ascii,
     )
@@ -32,6 +34,7 @@ except ImportError:
     from visualizer import (
         generate_swarm_image,
         render_ascii_swarm,
+        render_ascii_to_png_image,
         render_ascii_to_svg_image,
         render_copy_paste_ascii,
     )
@@ -129,11 +132,19 @@ def myswarm_ascii(args: dict, **kwargs: Any) -> str:
         copy_paste = render_copy_paste_ascii(cfg, sanitize_pii=True)
         copy_paste_block = f"```text\n{copy_paste}\n```"
 
-        dest_img = image_output_path or str(workspace_dir / "myswarm-ascii.svg")
-        saved_image_path = render_ascii_to_svg_image(
+        base_img = Path(image_output_path).expanduser().resolve() if image_output_path else (workspace_dir / "myswarm-ascii.svg")
+        svg_target = base_img.with_suffix(".svg")
+        png_target = base_img.with_suffix(".png")
+        img_title = f"MySwarm ASCII Topology — {cfg.title}"
+        saved_svg_path = render_ascii_to_svg_image(
             diagram,
-            dest_img,
-            title=f"MySwarm ASCII Topology — {cfg.title}",
+            svg_target,
+            title=img_title,
+        )
+        saved_png_path = render_ascii_to_png_image(
+            diagram,
+            png_target,
+            title=img_title,
         )
 
         return json.dumps(
@@ -146,7 +157,9 @@ def myswarm_ascii(args: dict, **kwargs: Any) -> str:
                 "total_redactions": san_result.total_redactions,
                 "redaction_counts": san_result.redaction_counts,
                 "llm_scrubbed": san_result.llm_scrubbed,
-                "ascii_image_path": saved_image_path,
+                "ascii_image_path": saved_svg_path,
+                "ascii_svg_path": saved_svg_path,
+                "ascii_png_path": saved_png_path,
                 "ascii_diagram": diagram,
                 "copy_paste_ascii": copy_paste,
                 "copy_paste_code_block": copy_paste_block,
@@ -346,14 +359,21 @@ def handle_slash_command(raw_args: str, ctx: Optional[Any] = None) -> str:
             )
             diagram = render_ascii_swarm(cfg, style=style, sanitize_pii=True)
             copy_paste = render_copy_paste_ascii(cfg, sanitize_pii=True)
+            img_title = f"MySwarm ASCII Topology — {cfg.title}"
             svg_path = render_ascii_to_svg_image(
                 diagram,
                 workspace_dir / "myswarm-ascii.svg",
-                title=f"MySwarm ASCII Topology — {cfg.title}",
+                title=img_title,
+            )
+            png_path = render_ascii_to_png_image(
+                diagram,
+                workspace_dir / "myswarm-ascii.png",
+                title=img_title,
             )
             return (
                 f"{diagram}\n\n"
-                f"ASCII Image Saved: {svg_path}\n"
+                f"ASCII SVG Saved  : {svg_path}\n"
+                f"ASCII PNG Saved  : {png_path}\n"
                 f"PII Pruning      : Enabled ({san_result.total_redactions} redaction(s) applied)\n\n"
                 f"Easy Copy-Paste ASCII Code (PII-pruned — safe to paste & share anywhere):\n"
                 f"```text\n{copy_paste}\n```\n\n"

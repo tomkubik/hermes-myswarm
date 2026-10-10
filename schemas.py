@@ -35,11 +35,12 @@ MYSWARM_ASCII = {
     "name": "myswarm_ascii",
     "description": (
         "Create a PII-pruned ASCII visualization of the user's agent swarm setup from agents.md. "
-        "In addition to rendering an image of the ASCII diagram (`ascii_image_path`), this tool "
-        "produces an easy copy-paste ASCII code block (`copy_paste_ascii` / `copy_paste_code_block`) "
+        "Out of the box, this tool automatically renders BOTH a vector SVG image (`ascii_svg_path` / `ascii_image_path`) "
+        "AND a social-media-ready PNG image (`ascii_png_path`) of the ASCII diagram, in addition to producing "
+        "an easy copy-paste ASCII code block (`copy_paste_ascii` / `copy_paste_code_block`) "
         "made of pure, portable ASCII symbols that the user can copy and paste anywhere to share. "
-        "When presenting the result to the user, ALWAYS include both the generated image and the "
-        "verbatim `copy_paste_code_block`, and let the user know they can share the ASCII code "
+        "When presenting the result to the user, ALWAYS include the generated image paths (both SVG and PNG) "
+        "and the verbatim `copy_paste_code_block`, and let the user know they can share the ASCII code "
         "(for a quick visual & starter config) and/or the exported `.md` file (`myswarm_export`, "
         "which is more comprehensive and preserves full agent instructions)."
     ),
@@ -61,8 +62,8 @@ MYSWARM_ASCII = {
             "image_output_path": {
                 "type": "string",
                 "description": (
-                    "Optional file path where the rendered ASCII visualization image (.svg) will be saved. "
-                    "Defaults to 'myswarm-ascii.svg' in the workspace directory."
+                    "Optional file path where the rendered ASCII visualization images (.svg and .png) will be saved. "
+                    "Defaults to 'myswarm-ascii.svg' and 'myswarm-ascii.png' in the workspace directory."
                 ),
             },
         },

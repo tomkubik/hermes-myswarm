@@ -197,12 +197,18 @@ class TestMySwarmPlugin(unittest.TestCase):
             self.assertIn("Delegation Flows:", diagram)
             self.assertIn("Nexus ──► Sentinel", diagram)
 
-            # Verify rendered ASCII SVG image was created on disk
-            svg_path = Path(res["ascii_image_path"])
+            # Verify rendered ASCII SVG and PNG images were created on disk out of the box
+            svg_path = Path(res["ascii_svg_path"])
+            png_path = Path(res["ascii_png_path"])
+            self.assertEqual(res["ascii_image_path"], res["ascii_svg_path"])
             self.assertTrue(svg_path.is_file())
+            self.assertTrue(png_path.is_file())
             svg_text = svg_path.read_text(encoding="utf-8")
             self.assertIn("<svg", svg_text)
             self.assertIn("Nexus", svg_text)
+            png_bytes = png_path.read_bytes()
+            self.assertTrue(png_bytes.startswith(b"\x89PNG\r\n\x1a\n"))
+            self.assertGreater(len(png_bytes), 500)
 
             # Verify easy copy-paste ASCII symbols block is 100% pure 7-bit ASCII, PII-pruned, and fenced
             self.assertTrue(res["pii_pruned"])

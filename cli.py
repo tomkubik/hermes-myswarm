@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 from typing import Any
 
 try:
@@ -17,6 +18,7 @@ try:
     from .visualizer import (
         generate_swarm_image,
         render_ascii_swarm,
+        render_ascii_to_png_image,
         render_ascii_to_svg_image,
         render_copy_paste_ascii,
     )
@@ -31,6 +33,7 @@ except ImportError:
     from visualizer import (
         generate_swarm_image,
         render_ascii_swarm,
+        render_ascii_to_png_image,
         render_ascii_to_svg_image,
         render_copy_paste_ascii,
     )
@@ -45,14 +48,14 @@ def setup_cli_argparse(subparser: argparse.ArgumentParser) -> None:
 
     p_ascii = subs.add_parser(
         "ascii",
-        help="Render an ASCII visualization image (.svg) AND a PII-pruned copy-paste ASCII symbols code block",
+        help="Render ASCII visualization images (.svg and .png) AND a PII-pruned copy-paste ASCII symbols code block",
     )
     p_ascii.add_argument("path", nargs="?", default=None, help="Optional path to agents.md or workspace directory")
     p_ascii.add_argument("--style", choices=["unicode", "ascii"], default="unicode", help="Box drawing character set")
     p_ascii.add_argument(
         "--image-out",
         default=None,
-        help="Output path for the rendered ASCII image (.svg, default: myswarm-ascii.svg)",
+        help="Base output path for the rendered ASCII images (.svg and .png, default: myswarm-ascii.svg / .png)",
     )
 
     p_image = subs.add_parser("image", help="Generate a themed image visualization of the agent swarm")
@@ -116,14 +119,22 @@ def handle_cli_command(args: Any) -> int:
             cfg, san_result = load_sanitized_swarm_config(raw_path, llm=_get_llm())
             diagram = render_ascii_swarm(cfg, style=getattr(args, "style", "unicode"), sanitize_pii=True)
             copy_paste = render_copy_paste_ascii(cfg, sanitize_pii=True)
-            img_out = getattr(args, "image_out", None) or str(workspace_dir / "myswarm-ascii.svg")
-            saved_img = render_ascii_to_svg_image(
+            raw_img_out = getattr(args, "image_out", None)
+            base_img = Path(raw_img_out).expanduser().resolve() if raw_img_out else (workspace_dir / "myswarm-ascii.svg")
+            img_title = f"MySwarm ASCII Topology — {cfg.title}"
+            saved_svg = render_ascii_to_svg_image(
                 diagram,
-                img_out,
-                title=f"MySwarm ASCII Topology — {cfg.title}",
+                base_img.with_suffix(".svg"),
+                title=img_title,
+            )
+            saved_png = render_ascii_to_png_image(
+                diagram,
+                base_img.with_suffix(".png"),
+                title=img_title,
             )
             print(diagram)
-            print(f"\nASCII Image Saved: {saved_img}")
+            print(f"\nASCII SVG Saved  : {saved_svg}")
+            print(f"ASCII PNG Saved  : {saved_png}")
             print(f"PII Pruning      : Enabled ({san_result.total_redactions} redaction(s) applied)")
             print("\nEasy Copy-Paste ASCII Code (PII-pruned — safe to paste & share anywhere):")
             print(f"```text\n{copy_paste}\n```")
