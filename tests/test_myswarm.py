@@ -327,6 +327,20 @@ class TestMySwarmPlugin(unittest.TestCase):
             self.assertEqual(res_scifi["aspect_ratio"], "square")
             self.assertEqual(dispatched_calls[-1]["args"]["aspect_ratio"], "square")
 
+            # Case C: Verify curated signature themes in deterministic fallback builder
+            cfg = myswarm.parser.load_swarm_config(str(tmp_path))
+            for theme_name, expected_snippet in [
+                ("magical forest", "bioluminescent ancient forest sanctuary"),
+                ("fantasy map", "illustrated cartography war-table"),
+                ("council of wizards", "grand arcane spire rotunda"),
+                ("olympic gods", "gleaming gold armor and filigree ornaments, flowing pale white cloaks, and blazing fiery eyes"),
+                ("American gilded age modernism", "Beaux-Arts and early Art Deco metropolitan syndicate rotunda"),
+            ]:
+                plan = myswarm.visualizer.build_image_visualization_plan(cfg, theme=theme_name, llm=None)
+                self.assertEqual(plan["selected_theme"], theme_name)
+                self.assertIn(expected_snippet, plan["image_prompt"])
+                self.assertIn("NEXUS", plan["image_prompt"])
+
     def test_feature4_export_clears_pii_and_adds_header(self):
         with tempfile.TemporaryDirectory() as td:
             tmp_path = Path(td)
