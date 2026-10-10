@@ -1,0 +1,29 @@
+name: myswarm
+version: 1.0.0
+manifest_version: 2
+api_version: 1
+description: "Discover, visualize (ASCII & AI-generated themed images), sanitize/export, and safely test/revert community agents.md swarm configurations."
+author: "MySwarm Contributors"
+license: MIT
+tags:
+  - swarm
+  - agents
+  - visualization
+  - config
+  - sharing
+provides_tools:
+  - myswarm_list
+  - myswarm_ascii
+  - myswarm_visualize_image
+  - myswarm_export
+  - myswarm_import
+  - myswarm_revert
+config_schema:
+  default_theme:
+    type: str
+    default: ""
+    description: "Optional default visual theme for myswarm_visualize_image (e.g. sci-fi, cyberpunk). Leave empty to let the model auto-select."
+  default_export_filename:
+    type: str
+    default: "myswarm-export.md"
+    description: "Default output filename when exporting a sanitized agents.md configuration."
