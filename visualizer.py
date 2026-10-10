@@ -556,64 +556,132 @@ def render_ascii_to_png_image(
     return str(dest)
 
 
-SWARM_VISUAL_THEMES: Dict[str, Dict[str, str]] = {
+# Dimension 1: Curated Signature Themes / Art Styles (what the world & aesthetic is about, orthogonal to intensity)
+CURATED_SIGNATURE_THEMES: Dict[str, Dict[str, str]] = {
     "cyberpunk": {
         "name": "cyberpunk",
-        "setting": "a neon-drenched high-tech megacity netrunner operations hub with rain-streaked glass and towering holo-screens",
-        "attire_and_style": "sleek cybernetic attire, glowing neural visors, chrome augments, and high-contrast neon magenta/cyan rim lighting",
-        "connections": "luminous neon fiber-optic data streams and holographic task trees connecting the central orchestrator to each specialist",
+        "setting": "a high-tech megacity netrunner operations hub with rain-streaked glass and holo-screens",
+        "attire_and_style": "cybernetic attire, neural visors, chrome augments, and magenta/cyan neon rim lighting",
+        "connections": "fiber-optic data streams and holographic task trees connecting the central orchestrator to each specialist",
     },
     "sci-fi": {
         "name": "sci-fi",
-        "setting": "an orbital deep-space starship bridge and panoramic command nexus overlooking a glowing nebula",
-        "attire_and_style": "precision-engineered titanium-weave command suits, astrometric HUDs, and crisp volumetric starlight",
-        "connections": "glowing plasma-blue holographic telemetry streams routing tasks from the central commander to each specialist station",
+        "setting": "an orbital deep-space starship bridge and command nexus overlooking a nebula",
+        "attire_and_style": "titanium-weave command suits, astrometric HUDs, and starlight illumination",
+        "connections": "plasma-blue holographic telemetry streams routing tasks from the central commander to each specialist station",
     },
     "magical forest": {
         "name": "magical forest",
-        "setting": "an enchanted bioluminescent ancient forest sanctuary beneath a colossal glowing elder tree",
-        "attire_and_style": "woodland-arcane regalia, glowing runes, mossy stone-and-crystal workstations, lantern light, and floating illuminated scrolls",
-        "connections": "luminous golden-and-cyan magical ley-line energy streams branching from the elder-tree rune console to each specialist",
+        "setting": "a bioluminescent ancient forest sanctuary beneath an elder tree",
+        "attire_and_style": "woodland-arcane attire, carved runes, mossy stone-and-crystal workstations, lanterns, and parchment scrolls",
+        "connections": "magical ley-line energy streams branching from the elder-tree rune console to each specialist",
     },
     "fantasy map": {
         "name": "fantasy map",
-        "setting": "an ornate, living illustrated cartography war-table and parchment realm map with miniature citadel bastions, compass roses, and inked banners",
-        "attire_and_style": "exquisite hand-illuminated fantasy cartography combined with living strategic commanders and heraldic emblems for each agent",
-        "connections": "glowing golden trade-and-messenger routes drawn across the parchment linking the capital citadel (orchestrator) to each specialist stronghold",
+        "setting": "an illustrated cartography war-table and parchment realm map with citadel bastions, compass roses, and inked banners",
+        "attire_and_style": "illuminated fantasy cartography combined with strategic commanders and heraldic emblems for each agent",
+        "connections": "charted trade-and-messenger routes drawn across the parchment linking the capital citadel (orchestrator) to each specialist stronghold",
     },
     "council of wizards": {
         "name": "council of wizards",
-        "setting": "a grand arcane spire rotunda and celestial library filled with floating grimoires, astrolabes, and crystal scrying orbs",
-        "attire_and_style": "ornate star-embroidered archmage robes, glowing staves, arcane sigils, and dramatic candle-and-spellfire chiaroscuro",
-        "connections": "swirling ribbons of golden and violet spell-light connecting the High Archmage orchestrator to each specialist wizard",
+        "setting": "an arcane spire rotunda and library with grimoires, astrolabes, and crystal scrying orbs",
+        "attire_and_style": "star-embroidered archmage robes, wooden and crystal staves, arcane sigils, and candle-and-spellfire lighting",
+        "connections": "ribbons of golden and violet spell-light connecting the High Archmage orchestrator to each specialist wizard",
     },
     "olympic gods": {
         "name": "olympic gods",
-        "setting": "an exaggerated, epic Mount Olympus marble pantheon temple above the clouds at golden hour",
-        "attire_and_style": "exaggerated divine stature, lots of gleaming gold armor and filigree ornaments, flowing pale white cloaks, and blazing fiery eyes",
-        "connections": "radiant golden lightning bolts and celestial holographic task streams linking the supreme Olympian orchestrator to each specialist deity",
+        "setting": "a Mount Olympus marble pantheon temple above the clouds",
+        "attire_and_style": "classical deity figures in gold armor and filigree ornaments, pale white cloaks, and fiery eyes",
+        "connections": "golden lightning bolts and celestial task streams linking the Olympian orchestrator to each specialist deity",
     },
     "american gilded age modernism": {
         "name": "American gilded age modernism",
-        "setting": "an opulent Beaux-Arts and early Art Deco metropolitan syndicate rotunda with grand marble columns, polished brass geometric inlays, and mahogany war-tables",
-        "attire_and_style": "bespoke Gilded Age tailored three-piece suits and evening attire fused with bold modernist brass ticker-tape machines, drafting tables, and warm Edison tungsten chandeliers",
-        "connections": "gleaming brass pneumatic tubes and amber electric telegraph light-lines connecting the central director's podium to each specialist's desk",
+        "setting": "a Beaux-Arts and early Art Deco metropolitan syndicate rotunda with marble columns, brass geometric inlays, and mahogany war-tables",
+        "attire_and_style": "tailored Gilded Age three-piece suits and evening attire paired with modernist brass ticker-tape machines, drafting tables, and Edison tungsten chandeliers",
+        "connections": "brass pneumatic tubes and amber electric telegraph light-lines connecting the central director's podium to each specialist's desk",
+    },
+    "noir detective": {
+        "name": "noir detective",
+        "setting": "a 1940s metropolitan detective agency bullpen at night with rain-streaked windows and Venetian blind shadows",
+        "attire_and_style": "trench coats, fedoras, tailored wool suits, typewriters, magnifying glasses, and warm amber desk lamps",
+        "connections": "crimson yarn investigation threads and pinned dossier routes linking the lead inspector's board to each specialist's desk",
+    },
+    "solarpunk": {
+        "name": "solarpunk",
+        "setting": "a sunlit botanical-glass arcology conservatory and renewable-energy command garden",
+        "attire_and_style": "woven organic-tech linen attire, stained-glass solar fins, and living vine-wrapped workstations",
+        "connections": "warm golden solar-prism light streams linking the central conservatory nexus to each specialist's terrace",
+    },
+    "steampunk": {
+        "name": "steampunk",
+        "setting": "a Victorian brass-and-copper clockwork airship bridge and mechanical atelier",
+        "attire_and_style": "leather aviators' waistcoats, brass goggles, intricate gearwork instruments, and difference-engine looms",
+        "connections": "pressurized copper aether-conduits and glowing pneumatic gauges connecting the captain's helm to each specialist bench",
+    },
+    "ukiyo-e woodblock": {
+        "name": "ukiyo-e woodblock",
+        "setting": "a traditional Edo-period Japanese woodblock print command pavilion framed by pines and stylized clouds",
+        "attire_and_style": "mineral-pigment indigo, vermilion, and ochre kimono robes, sumi-ink brushes, folding screens, and crisp woodblock linework",
+        "connections": "stylized flowing wave-and-wind currents carrying task scrolls from the central strategist to each specialist artisan",
+    },
+    "isometric blueprint": {
+        "name": "isometric blueprint",
+        "setting": "an architectural cyanotype and CAD technical schematic cutaway command floor on a coordinate grid",
+        "attire_and_style": "clean drafted engineer figures, technical callout boxes, precision measurement axes, and crisp white-and-cyan vector linework",
+        "connections": "directional schematic routing lines and labeled data-bus arrows connecting the central controller node to each specialist module",
+    },
+}
+
+# Keep alias for backward compatibility
+SWARM_VISUAL_THEMES = CURATED_SIGNATURE_THEMES
+
+# Dimension 2: Orthogonal Visual Intensity Levels (how understated, normal, or overstated the style is rendered)
+VISUAL_INTENSITY_LEVELS: Dict[str, Dict[str, str]] = {
+    "understated": {
+        "name": "understated",
+        "description": (
+            "Understated, restrained, and minimalist execution: subtle and grounded atmosphere, muted and refined "
+            "color palette, soft natural ambient lighting, clean uncluttered composition, and quiet architectural poise."
+        ),
+    },
+    "normal": {
+        "name": "normal",
+        "description": (
+            "Balanced, cohesive cinematic execution: natural dramatic lighting, clear character silhouettes and "
+            "expressions, well-proportioned props and environment, and crisp visual storytelling."
+        ),
+    },
+    "overstated": {
+        "name": "overstated",
+        "description": (
+            "Overstated, exaggerated, maximalist epic execution: larger-than-life scale, hyper-saturated luminous "
+            "highlights, lavish ornate detailing, dramatic volumetric god-rays and crackling energy auras, and bold heroic poses."
+        ),
     },
 }
 
 RICH_IMAGE_VISUALIZATION_GUIDELINES = """\
-Rich Image Visualization Guidelines for Agents:
-1. Theme Palette: Support any custom user theme, or choose/recommend from MySwarm's curated signature themes:
-   - `cyberpunk` (neon netrunner operations hub, chrome cyberware, holographic HUDs)
-   - `sci-fi` (deep-space starship bridge, orbital command nexus, plasma-blue holo-tables)
-   - `magical forest` (bioluminescent ancient elder-tree sanctuary, glowing runes, ley-line streams)
-   - `fantasy map` (living illustrated parchment cartography war-table, citadel bastions, golden route lines)
-   - `council of wizards` (grand arcane spire rotunda, levitating grimoires, spell-light threads)
-   - `olympic gods` (exaggerated Mount Olympus pantheon, lots of gleaming gold armor, flowing pale white cloaks, blazing fiery eyes)
-   - `American gilded age modernism` (opulent Beaux-Arts & early Art Deco marble/brass syndicate hall, Edison tungsten glow, brass ticker-tape & telegraph lines)
-2. Role & Persona Embodiment: Portray the orchestrator as the central figure directing the scene, and each specialist actively performing a task with props/tools that visually embody their specific persona and goal.
-3. Legible Agent Callouts: Include clean floating or engraved labels displaying each agent's Name and a concise 3-5 word mission callout near their character.
-4. Visible Delegation Topology: Explicitly depict theme-appropriate visual connections (holographic streams, ley-lines, golden lightning, spell-threads, map routes, or brass telegraph lines) flowing from the orchestrator to the specialists.
+Rich Image Visualization Guidelines for Agents (Orthogonal Theme x Intensity):
+1. Dimension 1 — Theme / Art Style (`CURATED_SIGNATURE_THEMES` — what the world is about):
+   Support any custom user theme, or choose/recommend from MySwarm's curated signature themes:
+   - `cyberpunk` (megacity netrunner operations hub, cyberware, neural visors)
+   - `sci-fi` (deep-space starship bridge, orbital command nexus, astrometric holo-tables)
+   - `magical forest` (bioluminescent ancient elder-tree sanctuary, carved runes, ley-line streams)
+   - `fantasy map` (illustrated parchment cartography war-table, citadel bastions, charted route lines)
+   - `council of wizards` (arcane spire rotunda, star-embroidered archmage robes, grimoires, spell-light threads)
+   - `olympic gods` (Mount Olympus marble pantheon, gold armor and filigree ornaments, pale white cloaks, fiery eyes)
+   - `American gilded age modernism` (Beaux-Arts & early Art Deco marble/brass syndicate hall, Edison tungsten glow, brass ticker-tape & telegraph lines)
+   - `noir detective` (1940s rain-slicked detective bullpen, trench coats, Venetian blind shadows, crimson yarn evidence threads)
+   - `solarpunk` (sunlit botanical-glass arcology conservatory, organic-tech attire, solar-prism light streams)
+   - `steampunk` (Victorian brass-and-copper clockwork airship bridge, gearwork looms, copper aether-conduits)
+   - `ukiyo-e woodblock` (Edo-period Japanese woodblock pavilion, mineral-pigment robes, stylized wave/wind scroll currents)
+   - `isometric blueprint` (architectural cyanotype & CAD technical cutaway schematic on a coordinate grid)
+2. Dimension 2 — Visual Intensity (`VISUAL_INTENSITY_LEVELS` — orthogonal to theme):
+   - `understated`: Subtle, restrained, minimalist, muted palette, soft ambient light, uncluttered poise.
+   - `normal` (default): Balanced cinematic concept art, natural dramatic lighting, clear proportions.
+   - `overstated`: Exaggerated, maximalist, larger-than-life epic spectacle, hyper-saturated glow, lavish ornamentation.
+3. Role & Persona Embodiment: Portray the orchestrator as the central figure directing the scene, and each specialist actively performing a task with props/tools that visually embody their specific persona and goal.
+4. Legible Agent Callouts & Delegation Topology: Include clean floating or engraved labels displaying each agent's Name and short mission, and depict theme-appropriate visual connections flowing from the orchestrator to the specialists.
 """
 
 _THEME_PROMPT_SCHEMA = {
@@ -623,20 +691,44 @@ _THEME_PROMPT_SCHEMA = {
             "type": "string",
             "description": (
                 "The visual theme name (e.g., 'cyberpunk', 'sci-fi', 'magical forest', 'fantasy map', "
-                "'council of wizards', 'olympic gods', 'American gilded age modernism')."
+                "'council of wizards', 'olympic gods', 'American gilded age modernism', 'noir detective', "
+                "'solarpunk', 'steampunk', 'ukiyo-e woodblock', 'isometric blueprint')."
             ),
+        },
+        "selected_intensity": {
+            "type": "string",
+            "enum": ["understated", "normal", "overstated"],
+            "description": "The orthogonal visual intensity level ('understated', 'normal', or 'overstated').",
         },
         "theme_rationale": {
             "type": "string",
-            "description": "One-sentence explanation of why this theme fits the swarm's personas and goals.",
+            "description": "One-sentence explanation of why this theme and intensity fit the swarm's personas and goals.",
         },
         "image_prompt": {
             "type": "string",
-            "description": "Detailed, vivid text-to-image prompt portraying the agent swarm, each agent's visual persona, legible name/goal callouts, and their collaborative environment.",
+            "description": "Detailed, vivid text-to-image prompt combining the selected theme, the orthogonal intensity level, each agent's visual persona, legible name/goal callouts, and their collaborative environment.",
         },
     },
-    "required": ["selected_theme", "theme_rationale", "image_prompt"],
+    "required": ["selected_theme", "selected_intensity", "theme_rationale", "image_prompt"],
 }
+
+
+def normalize_intensity(intensity: Optional[str], theme_text: Optional[str] = None) -> str:
+    """Resolve the orthogonal intensity level ('understated', 'normal', or 'overstated')."""
+    raw = (intensity or "").strip().lower()
+    if raw in VISUAL_INTENSITY_LEVELS:
+        return raw
+    if raw in {"subtle", "minimal", "minimalist", "muted", "quiet", "restrained"}:
+        return "understated"
+    if raw in {"exaggerated", "maximal", "maximalist", "epic", "extreme", "intense", "bold"}:
+        return "overstated"
+
+    blob = (theme_text or "").strip().lower()
+    if any(k in blob for k in ("understated", "subtle", "minimalist", "restrained", "muted")):
+        return "understated"
+    if any(k in blob for k in ("overstated", "exaggerated", "maximalist", "larger-than-life")):
+        return "overstated"
+    return "normal"
 
 
 def _match_theme_preset(theme_name: str) -> Optional[Dict[str, str]]:
@@ -644,21 +736,35 @@ def _match_theme_preset(theme_name: str) -> Optional[Dict[str, str]]:
     norm = (theme_name or "").strip().lower()
     if not norm:
         return None
-    if norm in SWARM_VISUAL_THEMES:
-        return SWARM_VISUAL_THEMES[norm]
-    for key, preset in SWARM_VISUAL_THEMES.items():
+    # Strip leading intensity prefixes if the user wrote e.g. 'overstated olympic gods'
+    for prefix in ("understated ", "normal ", "overstated ", "exaggerated ", "subtle ", "minimalist "):
+        if norm.startswith(prefix):
+            norm = norm[len(prefix) :].strip()
+    if norm in CURATED_SIGNATURE_THEMES:
+        return CURATED_SIGNATURE_THEMES[norm]
+    for key, preset in CURATED_SIGNATURE_THEMES.items():
         if key in norm or norm in key:
             return preset
     if "olymp" in norm or "god" in norm:
-        return SWARM_VISUAL_THEMES["olympic gods"]
+        return CURATED_SIGNATURE_THEMES["olympic gods"]
     if "wizard" in norm or "mage" in norm or "council" in norm:
-        return SWARM_VISUAL_THEMES["council of wizards"]
+        return CURATED_SIGNATURE_THEMES["council of wizards"]
     if "gilded" in norm or "modernism" in norm or "art deco" in norm or "beaux" in norm:
-        return SWARM_VISUAL_THEMES["american gilded age modernism"]
-    if "forest" in norm or "wood" in norm or "druid" in norm:
-        return SWARM_VISUAL_THEMES["magical forest"]
+        return CURATED_SIGNATURE_THEMES["american gilded age modernism"]
+    if "forest" in norm or "woodland" in norm or "druid" in norm:
+        return CURATED_SIGNATURE_THEMES["magical forest"]
     if "map" in norm or "cartograph" in norm:
-        return SWARM_VISUAL_THEMES["fantasy map"]
+        return CURATED_SIGNATURE_THEMES["fantasy map"]
+    if "noir" in norm or "detective" in norm:
+        return CURATED_SIGNATURE_THEMES["noir detective"]
+    if "solar" in norm:
+        return CURATED_SIGNATURE_THEMES["solarpunk"]
+    if "steam" in norm or "clockwork" in norm:
+        return CURATED_SIGNATURE_THEMES["steampunk"]
+    if "ukiyo" in norm or "woodblock" in norm or "edo" in norm:
+        return CURATED_SIGNATURE_THEMES["ukiyo-e woodblock"]
+    if "blueprint" in norm or "isometric" in norm or "schematic" in norm:
+        return CURATED_SIGNATURE_THEMES["isometric blueprint"]
     return None
 
 
@@ -685,6 +791,11 @@ def _heuristic_theme_for_swarm(config: SwarmConfig) -> Tuple[str, str]:
             "American gilded age modernism",
             "Selected 'American gilded age modernism' to match the structured, executive, and architectural craft of the swarm.",
         )
+    if any(k in blob for k in ("investigat", "forensic", "mystery", "detective", "clue", "inspect")):
+        return (
+            "noir detective",
+            "Selected 'noir detective' to match the investigative and analytical personas in the swarm.",
+        )
     if any(k in blob for k in ("nature", "eco", "forest", "organic", "garden", "biolum")):
         return (
             "magical forest",
@@ -706,9 +817,12 @@ def _heuristic_theme_for_swarm(config: SwarmConfig) -> Tuple[str, str]:
     )
 
 
-def _build_fallback_image_prompt(config: SwarmConfig, theme: str) -> str:
-    """Construct a detailed, art-directed image generation prompt from SwarmConfig and theme."""
+def _build_fallback_image_prompt(config: SwarmConfig, theme: str, intensity: str = "normal") -> str:
+    """Construct a detailed, art-directed image generation prompt from SwarmConfig, theme, and orthogonal intensity."""
     preset = _match_theme_preset(theme)
+    resolved_intensity = normalize_intensity(intensity, theme)
+    intensity_spec = VISUAL_INTENSITY_LEVELS[resolved_intensity]["description"]
+
     character_descriptions = []
     for a in config.agents[:6]:
         role_desc = "central lead commander" if a.role_type == "orchestrator" else "specialist operative"
@@ -719,21 +833,21 @@ def _build_fallback_image_prompt(config: SwarmConfig, theme: str) -> str:
 
     if preset is not None:
         return (
-            f"A highly detailed {theme} illustration of an AI agent swarm team of {len(config.agents)} "
+            f"A {resolved_intensity}-intensity {theme} illustration of an AI agent swarm team of {len(config.agents)} "
             f"collaborating characters set in {preset['setting']}. "
             f"Visual style & attire: {preset['attire_and_style']}. "
+            f"Intensity & art direction ({resolved_intensity}): {intensity_spec} "
             f"The characters represent: {chars_joined}. "
             f"Topology & connections: {preset['connections']}. "
-            f"Cinematic lighting, rich atmospheric depth, expressive character design reflecting each persona, "
-            f"concept art masterpiece, 8k resolution."
+            f"8k resolution."
         )
 
     return (
-        f"A highly detailed {theme} illustration of an AI agent swarm team of {len(config.agents)} "
+        f"A {resolved_intensity}-intensity {theme} illustration of an AI agent swarm team of {len(config.agents)} "
         f"collaborating characters in a unified command environment. "
+        f"Intensity & art direction ({resolved_intensity}): {intensity_spec} "
         f"The characters represent: {chars_joined}. "
-        f"Cinematic lighting, rich atmospheric depth, expressive character design reflecting each persona, "
-        f"holographic data streams connecting the orchestrator to the specialists, concept art masterpiece, 8k resolution."
+        f"Holographic data streams connecting the orchestrator to the specialists, 8k resolution."
     )
 
 
@@ -741,11 +855,14 @@ def build_image_visualization_plan(
     config: SwarmConfig,
     *,
     theme: Optional[str] = None,
+    intensity: Optional[str] = None,
     llm: Optional[Any] = None,
 ) -> Dict[str, str]:
-    """Use the default model (with deterministic fallback) to pick/apply a theme and craft an image prompt."""
+    """Use the default model (with deterministic fallback) to pick/apply a theme + orthogonal intensity and craft an image prompt."""
     config, _ = sanitize_swarm_config(config)
     user_theme = (theme or "").strip()
+    resolved_intensity = normalize_intensity(intensity, user_theme)
+    intensity_spec = VISUAL_INTENSITY_LEVELS[resolved_intensity]["description"]
     mode = "user_specified" if user_theme else "model_auto_selected"
 
     agents_summary = "\n".join(
@@ -759,26 +876,33 @@ def build_image_visualization_plan(
         if preset
         else ""
     )
+    intensity_hint = (
+        f"\nSelected Visual Intensity ('{resolved_intensity}'): {intensity_spec}"
+    )
 
     if llm is not None:
         try:
             if user_theme:
                 instructions = (
-                    f"The user wants to visualize their AI agent swarm in the '{user_theme}' theme. "
-                    f"Keep `selected_theme` as '{user_theme}', explain briefly how this theme highlights the swarm in "
-                    "`theme_rationale`, and craft a rich, cinematic text-to-image prompt in `image_prompt` that "
-                    "depicts each agent's persona and goal collaborating together.\n\n"
-                    f"{RICH_IMAGE_VISUALIZATION_GUIDELINES}{preset_hint}"
+                    f"The user wants to visualize their AI agent swarm in the '{user_theme}' theme "
+                    f"at '{resolved_intensity}' visual intensity. "
+                    f"Keep `selected_theme` as '{user_theme}' and `selected_intensity` as '{resolved_intensity}', "
+                    "explain briefly how this theme and intensity highlight the swarm in `theme_rationale`, "
+                    "and craft a vivid text-to-image prompt in `image_prompt` that depicts each agent's persona "
+                    "and goal collaborating together.\n\n"
+                    f"{RICH_IMAGE_VISUALIZATION_GUIDELINES}{preset_hint}{intensity_hint}"
                 )
             else:
                 instructions = (
                     "The user did not specify a visual theme for their AI agent swarm visualization. "
                     "Analyze the agents' personas and goals below, pick the single most fitting and imaginative "
-                    "visual theme (for example from our signature themes: 'cyberpunk', 'sci-fi', 'magical forest', "
-                    "'fantasy map', 'council of wizards', 'olympic gods', 'American gilded age modernism', or another "
-                    "vivid custom theme), explain why you chose it in `theme_rationale`, and craft a vivid "
-                    "text-to-image prompt in `image_prompt` depicting the entire swarm and each agent's role.\n\n"
-                    f"{RICH_IMAGE_VISUALIZATION_GUIDELINES}"
+                    "visual theme from `CURATED_SIGNATURE_THEMES` (e.g., 'cyberpunk', 'sci-fi', 'magical forest', "
+                    "'fantasy map', 'council of wizards', 'olympic gods', 'American gilded age modernism', "
+                    "'noir detective', 'solarpunk', 'steampunk', 'ukiyo-e woodblock', 'isometric blueprint', or another "
+                    f"custom theme) and render it at '{resolved_intensity}' intensity (`selected_intensity`), "
+                    "explain why you chose it in `theme_rationale`, and craft a vivid text-to-image prompt in "
+                    "`image_prompt` depicting the entire swarm and each agent's role.\n\n"
+                    f"{RICH_IMAGE_VISUALIZATION_GUIDELINES}{intensity_hint}"
                 )
             res = llm.complete_structured(
                 instructions=instructions,
@@ -792,6 +916,7 @@ def build_image_visualization_plan(
             if isinstance(parsed, dict) and parsed.get("image_prompt"):
                 return {
                     "selected_theme": str(parsed.get("selected_theme") or user_theme or "sci-fi").strip(),
+                    "selected_intensity": normalize_intensity(parsed.get("selected_intensity") or resolved_intensity),
                     "theme_selection_mode": mode,
                     "theme_rationale": str(parsed.get("theme_rationale") or "Selected by default model.").strip(),
                     "image_prompt": str(parsed["image_prompt"]).strip(),
@@ -801,13 +926,17 @@ def build_image_visualization_plan(
 
     if user_theme:
         chosen_theme = user_theme
-        rationale = f"User explicitly requested the '{user_theme}' visualization theme."
+        rationale = (
+            f"User requested the '{user_theme}' visualization theme at '{resolved_intensity}' intensity."
+        )
     else:
-        chosen_theme, rationale = _heuristic_theme_for_swarm(config)
+        chosen_theme, base_rationale = _heuristic_theme_for_swarm(config)
+        rationale = f"{base_rationale} Rendered at '{resolved_intensity}' intensity."
 
-    prompt = _build_fallback_image_prompt(config, chosen_theme)
+    prompt = _build_fallback_image_prompt(config, chosen_theme, intensity=resolved_intensity)
     return {
         "selected_theme": chosen_theme,
+        "selected_intensity": resolved_intensity,
         "theme_selection_mode": mode,
         "theme_rationale": rationale,
         "image_prompt": prompt,
@@ -818,12 +947,13 @@ def generate_swarm_image(
     config: SwarmConfig,
     *,
     theme: Optional[str] = None,
+    intensity: Optional[str] = None,
     aspect_ratio: str = "landscape",
     llm: Optional[Any] = None,
     dispatch_tool: Optional[Callable[[str, Dict[str, Any]], str]] = None,
 ) -> Dict[str, Any]:
     """Generate an image visualization of the agent swarm using the default model and `image_generate`."""
-    plan = build_image_visualization_plan(config, theme=theme, llm=llm)
+    plan = build_image_visualization_plan(config, theme=theme, intensity=intensity, llm=llm)
     valid_ratio = aspect_ratio if aspect_ratio in {"landscape", "square", "portrait"} else "landscape"
     copy_paste_ascii = render_copy_paste_ascii(config)
 
@@ -855,6 +985,7 @@ def generate_swarm_image(
         "source_path": config.source_path,
         "agent_count": len(config.agents),
         "selected_theme": plan["selected_theme"],
+        "selected_intensity": plan["selected_intensity"],
         "theme_selection_mode": plan["theme_selection_mode"],
         "theme_rationale": plan["theme_rationale"],
         "aspect_ratio": valid_ratio,

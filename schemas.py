@@ -75,12 +75,13 @@ MYSWARM_VISUALIZE_IMAGE = {
     "name": "myswarm_visualize_image",
     "description": (
         "Create a rich, art-directed image visualization of the user's agent swarm setup by having the default model "
-        "design a visual scene and generate an image via Hermes's image generation tool. "
-        "The user can specify any custom theme or pick from MySwarm's curated signature themes: "
+        "design a visual scene across two orthogonal dimensions—Theme/Art Style (`theme`) and Visual Intensity (`intensity`)—"
+        "and generate an image via Hermes's image generation tool. "
+        "The user can specify any custom theme or pick from MySwarm's `CURATED_SIGNATURE_THEMES`: "
         "'cyberpunk', 'sci-fi', 'magical forest', 'fantasy map', 'council of wizards', 'olympic gods', "
-        "or 'American gilded age modernism'. If omitted, the default model automatically picks the best "
-        "visualization theme matching the swarm's personas and goals, portraying the central orchestrator, "
-        "each specialist's tools/props, legible agent name/mission callouts, and task delegation streams."
+        "'American gilded age modernism', 'noir detective', 'solarpunk', 'steampunk', 'ukiyo-e woodblock', "
+        "or 'isometric blueprint'. Orthogonal to the theme, `intensity` controls whether the execution is "
+        "'understated' (subtle, minimalist, muted), 'normal' (balanced cinematic), or 'overstated' (exaggerated, maximalist epic)."
     ),
     "parameters": {
         "type": "object",
@@ -88,9 +89,18 @@ MYSWARM_VISUALIZE_IMAGE = {
             "theme": {
                 "type": "string",
                 "description": (
-                    "Optional visual theme for the image (e.g., 'cyberpunk', 'sci-fi', 'magical forest', "
+                    "Optional visual theme/art style for the image (e.g., 'cyberpunk', 'sci-fi', 'magical forest', "
                     "'fantasy map', 'council of wizards', 'olympic gods', 'American gilded age modernism', "
+                    "'noir detective', 'solarpunk', 'steampunk', 'ukiyo-e woodblock', 'isometric blueprint', "
                     "or any custom theme). Leave empty or omit to let the default model choose the best theme automatically."
+                ),
+            },
+            "intensity": {
+                "type": "string",
+                "enum": ["understated", "normal", "overstated"],
+                "description": (
+                    "Orthogonal visual intensity level: 'understated' (subtle, restrained, minimalist), "
+                    "'normal' (balanced cinematic default), or 'overstated' (exaggerated, maximalist, larger-than-life)."
                 ),
             },
             "aspect_ratio": {

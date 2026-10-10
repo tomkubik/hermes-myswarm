@@ -327,19 +327,37 @@ class TestMySwarmPlugin(unittest.TestCase):
             self.assertEqual(res_scifi["aspect_ratio"], "square")
             self.assertEqual(dispatched_calls[-1]["args"]["aspect_ratio"], "square")
 
-            # Case C: Verify curated signature themes in deterministic fallback builder
+            # Case C: Verify CURATED_SIGNATURE_THEMES and orthogonal intensity levels (understated, normal, overstated)
             cfg = myswarm.parser.load_swarm_config(str(tmp_path))
+            self.assertGreaterEqual(len(myswarm.visualizer.CURATED_SIGNATURE_THEMES), 12)
             for theme_name, expected_snippet in [
                 ("magical forest", "bioluminescent ancient forest sanctuary"),
                 ("fantasy map", "illustrated cartography war-table"),
-                ("council of wizards", "grand arcane spire rotunda"),
-                ("olympic gods", "gleaming gold armor and filigree ornaments, flowing pale white cloaks, and blazing fiery eyes"),
+                ("council of wizards", "arcane spire rotunda"),
+                ("olympic gods", "gold armor and filigree ornaments, pale white cloaks, and fiery eyes"),
                 ("American gilded age modernism", "Beaux-Arts and early Art Deco metropolitan syndicate rotunda"),
+                ("noir detective", "1940s metropolitan detective agency bullpen"),
+                ("solarpunk", "botanical-glass arcology conservatory"),
+                ("steampunk", "clockwork airship bridge"),
+                ("ukiyo-e woodblock", "Edo-period Japanese woodblock print command pavilion"),
+                ("isometric blueprint", "architectural cyanotype and CAD technical schematic"),
             ]:
-                plan = myswarm.visualizer.build_image_visualization_plan(cfg, theme=theme_name, llm=None)
-                self.assertEqual(plan["selected_theme"], theme_name)
-                self.assertIn(expected_snippet, plan["image_prompt"])
-                self.assertIn("NEXUS", plan["image_prompt"])
+                for intensity_lvl, expected_intensity_phrase in [
+                    ("understated", "Understated, restrained, and minimalist execution"),
+                    ("normal", "Balanced, cohesive cinematic execution"),
+                    ("overstated", "Overstated, exaggerated, maximalist epic execution"),
+                ]:
+                    plan = myswarm.visualizer.build_image_visualization_plan(
+                        cfg,
+                        theme=theme_name,
+                        intensity=intensity_lvl,
+                        llm=None,
+                    )
+                    self.assertEqual(plan["selected_theme"], theme_name)
+                    self.assertEqual(plan["selected_intensity"], intensity_lvl)
+                    self.assertIn(expected_snippet, plan["image_prompt"])
+                    self.assertIn(expected_intensity_phrase, plan["image_prompt"])
+                    self.assertIn("NEXUS", plan["image_prompt"])
 
     def test_feature4_export_clears_pii_and_adds_header(self):
         with tempfile.TemporaryDirectory() as td:

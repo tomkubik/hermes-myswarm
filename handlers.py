@@ -172,10 +172,11 @@ def myswarm_ascii(args: dict, **kwargs: Any) -> str:
 
 
 def myswarm_visualize_image(args: dict, **kwargs: Any) -> str:
-    """Handler for myswarm_visualize_image tool: generate a themed image of the agent setup (PII-pruned)."""
+    """Handler for myswarm_visualize_image tool: generate a themed image of the agent setup."""
     try:
         path = (args or {}).get("path")
         theme = (args or {}).get("theme")
+        intensity = (args or {}).get("intensity")
         if not theme:
             theme = _get_config_str("default_theme", "")
         aspect_ratio = str((args or {}).get("aspect_ratio") or "landscape").strip().lower()
@@ -189,6 +190,7 @@ def myswarm_visualize_image(args: dict, **kwargs: Any) -> str:
         result = generate_swarm_image(
             cfg,
             theme=theme or None,
+            intensity=intensity or None,
             aspect_ratio=aspect_ratio,
             llm=_get_llm(),
             dispatch_tool=_get_dispatcher(),
@@ -380,7 +382,17 @@ def handle_slash_command(raw_args: str, ctx: Optional[Any] = None) -> str:
             )
 
         if sub == "image":
-            theme = " ".join(rest).strip() if rest else (_get_config_str("default_theme", "", active_ctx) or None)
+            intensity_arg: Optional[str] = None
+            theme_tokens: List[str] = []
+            for tok in rest:
+                low = tok.lower()
+                if low in {"--understated", "--normal", "--overstated"}:
+                    intensity_arg = low.lstrip("-")
+                elif low.startswith("--intensity="):
+                    intensity_arg = low.split("=", 1)[1].strip()
+                else:
+                    theme_tokens.append(tok)
+            theme = " ".join(theme_tokens).strip() if theme_tokens else (_get_config_str("default_theme", "", active_ctx) or None)
             cfg, _san = load_sanitized_swarm_config(
                 None,
                 llm=_get_llm(active_ctx),
@@ -390,12 +402,14 @@ def handle_slash_command(raw_args: str, ctx: Optional[Any] = None) -> str:
             res = generate_swarm_image(
                 cfg,
                 theme=theme,
+                intensity=intensity_arg,
                 llm=_get_llm(active_ctx),
                 dispatch_tool=_get_dispatcher(active_ctx),
             )
             lines = [
                 "[MySwarm Image Visualization]",
                 f"  Theme     : {res['selected_theme']} ({res['theme_selection_mode']})",
+                f"  Intensity : {res['selected_intensity']}",
                 f"  Rationale : {res['theme_rationale']}",
                 f"  Prompt    : {res['image_prompt']}",
             ]

@@ -9,17 +9,25 @@
 2. **ASCII Swarm Topology (`myswarm_ascii` / `/myswarm ascii`)**
    Runs best-effort PII scrubbing first, then out of the box renders **both** a vector SVG image (`myswarm-ascii.svg`) **and** a social-media-ready PNG image (`myswarm-ascii.png`) of your ASCII swarm diagram, a box-and-arrow topology diagram, **and** a ready-to-share **Easy Copy-Paste ASCII Code Block** made of pure 7-bit ASCII symbols (`+`, `-`, `|`, `===>`, role icons like `[\^/]`, `[#!#]`, `[{/}]`, `[?=?]`, stamped `[Shared via Hermes MySwarm Plugin]`).
    - *Sharing Tip*: Share the **ASCII code** for a quick visual preview and lightweight starter config (1-line personas/goals + routing), and/or share the exported **`.md` file** for the comprehensive, lossless agent instructions.
-3. **Rich AI-Generated Image Visualization (`myswarm_visualize_image` / `/myswarm image [theme]`)**
-   Uses your active default model (`ctx.llm`) and Hermes's `image_generate` tool to create an art-directed illustration of your agent swarm—portraying the central orchestrator, each specialist's persona/tools, legible agent name/goal callouts, and visual task delegation streams.
-   - **Curated Signature Themes**:
-     - `cyberpunk` — neon-drenched megacity netrunner operations hub, chrome cyberware, holographic HUDs & data streams
+3. **Rich AI-Generated Image Visualization (`myswarm_visualize_image` / `/myswarm image [--understated|--normal|--overstated] [theme]`)**
+   Uses your active default model (`ctx.llm`) and Hermes's `image_generate` tool to create an art-directed illustration of your agent swarm across two **orthogonal dimensions**:
+   - **Dimension 1: Theme / Art Style (`CURATED_SIGNATURE_THEMES`)**:
+     - `cyberpunk` — megacity netrunner operations hub, cyberware, neural visors, fiber-optic data streams
      - `sci-fi` — orbital deep-space starship bridge, titanium-weave command suits, plasma-blue astrometric holo-tables
-     - `magical forest` — bioluminescent ancient elder-tree sanctuary, glowing runes, mossy workstations, ley-line streams
-     - `fantasy map` — ornate living illustrated parchment cartography war-table, miniature citadel bastions, golden route lines
-     - `council of wizards` — grand arcane spire rotunda, star-embroidered archmage robes, floating grimoires, spell-light threads
-     - `olympic gods` — exaggerated Mount Olympus marble pantheon, lots of gleaming gold armor/ornaments, flowing pale white cloaks, blazing fiery eyes, golden lightning streams
-     - `American gilded age modernism` — opulent Beaux-Arts & early Art Deco marble/brass syndicate rotunda, bespoke Gilded Age attire, brass ticker-tape machines, warm Edison tungsten glow
-   - Or omit the theme and let your default model automatically pick the best visual theme based on your agents' personas and goals.
+     - `magical forest` — bioluminescent ancient elder-tree sanctuary, carved runes, mossy workstations, ley-line streams
+     - `fantasy map` — illustrated parchment cartography war-table, citadel bastions, compass roses, charted route lines
+     - `council of wizards` — arcane spire rotunda, star-embroidered archmage robes, grimoires, spell-light threads
+     - `olympic gods` — Mount Olympus marble pantheon, gold armor and filigree ornaments, pale white cloaks, fiery eyes, golden lightning streams
+     - `American gilded age modernism` — Beaux-Arts & early Art Deco marble/brass syndicate rotunda, tailored Gilded Age attire, brass ticker-tape machines, Edison tungsten lighting
+     - `noir detective` — 1940s rain-slicked detective bullpen, trench coats, Venetian blind shadows, crimson yarn evidence threads
+     - `solarpunk` — sunlit botanical-glass arcology conservatory, organic-tech linen attire, solar-prism light streams
+     - `steampunk` — Victorian brass-and-copper clockwork airship bridge, gearwork instruments, copper aether-conduits
+     - `ukiyo-e woodblock` — Edo-period Japanese woodblock command pavilion, mineral-pigment robes, wave-and-wind scroll currents
+     - `isometric blueprint` — architectural cyanotype & CAD technical schematic cutaway floor on a coordinate grid
+   - **Dimension 2: Orthogonal Visual Intensity (`intensity`)**:
+     - `understated` — subtle, restrained, minimalist, muted palette, soft ambient light, uncluttered poise
+     - `normal` *(default)* — balanced cinematic concept art, natural dramatic lighting, clear proportions
+     - `overstated` — exaggerated, maximalist, larger-than-life epic spectacle, hyper-saturated glow, lavish ornamentation
 4. **PII-Cleared Markdown Export (`myswarm_export` / `/myswarm export [output.md]`)**
    Runs a two-stage PII scrubber (deterministic regex redaction for emails, phone numbers, IPs, local `/Users/<name>` paths, API keys/tokens, and owner fields + optional contextual LLM redaction) and exports a comprehensive `.md` file prefixed with:
    ```markdown

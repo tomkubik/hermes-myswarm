@@ -59,7 +59,13 @@ def setup_cli_argparse(subparser: argparse.ArgumentParser) -> None:
     )
 
     p_image = subs.add_parser("image", help="Generate a themed image visualization of the agent swarm")
-    p_image.add_argument("theme", nargs="?", default=None, help="Optional visual theme (e.g. sci-fi, cyberpunk)")
+    p_image.add_argument("theme", nargs="?", default=None, help="Optional visual theme (e.g. sci-fi, cyberpunk, olympic gods)")
+    p_image.add_argument(
+        "--intensity",
+        choices=["understated", "normal", "overstated"],
+        default=None,
+        help="Orthogonal visual intensity level (understated, normal, overstated)",
+    )
     p_image.add_argument("--path", default=None, help="Optional path to agents.md or workspace directory")
     p_image.add_argument(
         "--aspect-ratio",
@@ -145,11 +151,13 @@ def handle_cli_command(args: Any) -> int:
             res = generate_swarm_image(
                 cfg,
                 theme=getattr(args, "theme", None),
+                intensity=getattr(args, "intensity", None),
                 aspect_ratio=getattr(args, "aspect_ratio", "landscape"),
                 llm=_get_llm(),
                 dispatch_tool=_get_dispatcher(),
             )
             print(f"Theme     : {res['selected_theme']} ({res['theme_selection_mode']})")
+            print(f"Intensity : {res['selected_intensity']}")
             print(f"Rationale : {res['theme_rationale']}")
             print(f"Prompt    : {res['image_prompt']}")
             if res.get("image_result"):
