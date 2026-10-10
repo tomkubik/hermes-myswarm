@@ -49,6 +49,86 @@ def _wrap_fixed_pure_ascii(text: str, width: int) -> str:
     return ascii_clean.ljust(width)
 
 
+def _wrap_words_to_lines(
+    text: str,
+    avail_width: int,
+    *,
+    max_lines: int = 4,
+    pure_ascii: bool = False,
+) -> List[str]:
+    """Word-wrap *text* into at most *max_lines* lines of *avail_width* chars each."""
+    if pure_ascii:
+        cleaned = " ".join(text.encode("ascii", errors="ignore").decode("ascii").strip().split())
+    else:
+        cleaned = " ".join(text.strip().split())
+    if not cleaned:
+        return [""]
+    avail = max(8, avail_width)
+    words = cleaned.split(" ")
+    lines: List[str] = []
+    current = ""
+    idx = 0
+    while idx < len(words):
+        word = words[idx]
+        if not current:
+            if len(word) <= avail:
+                current = word
+                idx += 1
+            else:
+                lines.append(word[:avail])
+                words[idx] = word[avail:]
+        elif len(current) + 1 + len(word) <= avail:
+            current = f"{current} {word}"
+            idx += 1
+        else:
+            lines.append(current)
+            current = ""
+        if len(lines) == max_lines and (current or idx < len(words)):
+            # Truncate the last line cleanly with ellipsis
+            last = lines[-1]
+            ellipsis = "..." if pure_ascii else "…"
+            if len(last) + len(ellipsis) <= avail:
+                lines[-1] = last.rstrip(" ,;:") + ellipsis
+            else:
+                lines[-1] = last[: avail - len(ellipsis)].rstrip(" ,;:") + ellipsis
+            return lines
+    if current:
+        lines.append(current)
+    return lines or [""]
+
+
+def _wrap_labeled_multiline(
+    label: str,
+    text: str,
+    width: int,
+    *,
+    max_lines: int = 4,
+    pure_ascii: bool = False,
+    min_lines: int = 1,
+) -> List[str]:
+    """Format a labeled field across multiple wrapped lines with hanging indent padded to *width*."""
+    indent = " " * len(label)
+    avail = max(8, width - len(label))
+    raw_lines = _wrap_words_to_lines(text, avail, max_lines=max_lines, pure_ascii=pure_ascii)
+    while len(raw_lines) < min_lines:
+        raw_lines.append("")
+    formatter = _wrap_fixed_pure_ascii if pure_ascii else _wrap_fixed
+    formatted: List[str] = []
+    for i, segment in enumerate(raw_lines):
+        prefix = label if i == 0 else indent
+        if pure_ascii:
+            # Preserve leading spaces in hanging indent
+            line_str = prefix + segment
+            if len(line_str) > width:
+                line_str = line_str[: width - 3].rstrip() + "..."
+            else:
+                line_str = line_str.ljust(width)
+            formatted.append(line_str)
+        else:
+            formatted.append(formatter(prefix + segment, width))
+    return formatted
+
+
 def _ascii_avatar_for_agent(agent: AgentSpec) -> str:
     """Return a pure-ASCII symbol icon representing the agent's role/persona."""
     if agent.role_type == "orchestrator":
@@ -65,26 +145,93 @@ def _ascii_avatar_for_agent(agent: AgentSpec) -> str:
     return "[o_o]"
 
 
-def _render_agent_card(agent: AgentSpec, box_width: int, ch: Dict[str, str]) -> List[str]:
-    """Render a single agent card of fixed *box_width* (total width = box_width + 2)."""
+def _render_agent_card(
+    agent: AgentSpec,
+    box_width: int,
+    ch: Dict[str, str],
+    *,
+    min_persona_lines: int = 1,
+    min_goal_lines: int = 1,
+    min_route_lines: int = 0,
+) -> List[str]:
+    """Render a single agent card of fixed *box_width* (total width = box_width + 2) with multi-line text."""
     inner = box_width
     badge = "[ORCHESTRATOR]" if agent.role_type == "orchestrator" else "[AGENT]"
     title_str = f"{badge} {agent.name}"
-    p_str = f"Persona: {abbreviate_text(agent.persona, inner - 9)}"
-    g_str = f"Goal   : {abbreviate_text(agent.goal, inner - 9)}"
+    p_lines = _wrap_labeled_multiline(
+        "Persona: ",
+        agent.persona,
+        inner - 2,
+        max_lines=4,
+        min_lines=min_persona_lines,
+    )
+    g_lines = _wrap_labeled_multiline(
+        "Goal   : ",
+        agent.goal,
+        inner - 2,
+        max_lines=4,
+        min_lines=min_goal_lines,
+    )
 
     lines = [
         f"{ch['tl']}{ch['h'] * inner}{ch['tr']}",
         f"{ch['v']} {_wrap_fixed(title_str, inner - 2)} {ch['v']}",
         f"{ch['ml']}{ch['h'] * inner}{ch['mr']}",
-        f"{ch['v']} {_wrap_fixed(p_str, inner - 2)} {ch['v']}",
-        f"{ch['v']} {_wrap_fixed(g_str, inner - 2)} {ch['v']}",
     ]
+    for p_line in p_lines:
+        lines.append(f"{ch['v']} {p_line} {ch['v']}")
+    for g_line in g_lines:
+        lines.append(f"{ch['v']} {g_line} {ch['v']}")
+
     if agent.delegates_to:
-        d_str = f"Routes : {', '.join(agent.delegates_to)}"
-        lines.append(f"{ch['v']} {_wrap_fixed(d_str, inner - 2)} {ch['v']}")
+        r_lines = _wrap_labeled_multiline(
+            "Routes : ",
+            ", ".join(agent.delegates_to),
+            inner - 2,
+            max_lines=2,
+            min_lines=max(1, min_route_lines),
+        )
+        for r_line in r_lines:
+            lines.append(f"{ch['v']} {r_line} {ch['v']}")
+    elif min_route_lines > 0:
+        for _ in range(min_route_lines):
+            lines.append(f"{ch['v']} {' ' * (inner - 2)} {ch['v']}")
+
     lines.append(f"{ch['bl']}{ch['h'] * inner}{ch['br']}")
     return lines
+
+
+def _render_aligned_card_row(
+    row_agents: List[AgentSpec],
+    box_width: int,
+    ch: Dict[str, str],
+    *,
+    gap: int = 4,
+) -> List[str]:
+    """Render 1 or 2 agent cards side-by-side with aligned Persona, Goal, and Routes section heights."""
+    if not row_agents:
+        return []
+    inner_text_w = box_width - 2
+    label_w = len("Persona: ")
+    avail = max(8, inner_text_w - label_w)
+    max_p = max(len(_wrap_words_to_lines(a.persona, avail, max_lines=4)) for a in row_agents)
+    max_g = max(len(_wrap_words_to_lines(a.goal, avail, max_lines=4)) for a in row_agents)
+    max_r = max(
+        (len(_wrap_words_to_lines(", ".join(a.delegates_to), avail, max_lines=2)) if a.delegates_to else 0)
+        for a in row_agents
+    )
+    cards = [
+        _render_agent_card(
+            a,
+            box_width,
+            ch,
+            min_persona_lines=max_p,
+            min_goal_lines=max_g,
+            min_route_lines=max_r,
+        )
+        for a in row_agents
+    ]
+    return _join_cards_horizontally(cards, gap=gap)
 
 
 def _join_cards_horizontally(cards: List[List[str]], gap: int = 3) -> List[str]:
@@ -123,11 +270,10 @@ def render_ascii_swarm(config: SwarmConfig, *, style: str = "unicode", sanitize_
     out.append(f"{ch['bl']}{ch['h'] * banner_w}{ch['br']}")
     out.append("")
 
-    card_inner_w = 36  # total card width = 38
+    card_inner_w = 46  # total card width = 48 (up to 4 lines x 35 chars per field)
 
     if orchestrators:
-        orch_cards = [_render_agent_card(o, card_inner_w, ch) for o in orchestrators[:2]]
-        orch_block = _join_cards_horizontally(orch_cards, gap=4)
+        orch_block = _render_aligned_card_row(orchestrators[:2], card_inner_w, ch, gap=4)
         for line in orch_block:
             out.append(line)
 
@@ -156,8 +302,7 @@ def render_ascii_swarm(config: SwarmConfig, *, style: str = "unicode", sanitize_
 
     for idx in range(0, len(specialists), 2):
         pair = specialists[idx : idx + 2]
-        cards = [_render_agent_card(a, card_inner_w, ch) for a in pair]
-        row_lines = _join_cards_horizontally(cards, gap=4)
+        row_lines = _render_aligned_card_row(pair, card_inner_w, ch, gap=4)
         for line in row_lines:
             out.append(line)
         if idx + 2 < len(specialists):
@@ -185,7 +330,7 @@ def render_copy_paste_ascii(config: SwarmConfig, *, sanitize_pii: bool = True) -
     if not agents:
         return "+--- MySwarm (0 agents) ---+"
 
-    width = 64
+    width = 78
     inner = width - 2
     title_clean = config.title.encode("ascii", errors="ignore").decode("ascii").strip() or "Agent Swarm"
     header_line = f"MYSWARM // {title_clean} ({len(agents)} Agents)"
@@ -204,8 +349,20 @@ def render_copy_paste_ascii(config: SwarmConfig, *, sanitize_pii: bool = True) -
         icon = _ascii_avatar_for_agent(agent)
         role_tag = "ORCHESTRATOR" if agent.role_type == "orchestrator" else "SPECIALIST"
         head = f"{icon} {agent.name} [{role_tag}]"
-        p_line = f"  * Persona : {agent.persona}"
-        g_line = f"  * Goal    : {agent.goal}"
+        p_lines = _wrap_labeled_multiline(
+            "  * Persona : ",
+            agent.persona,
+            inner - 2,
+            max_lines=4,
+            pure_ascii=True,
+        )
+        g_lines = _wrap_labeled_multiline(
+            "  * Goal    : ",
+            agent.goal,
+            inner - 2,
+            max_lines=4,
+            pure_ascii=True,
+        )
 
         if idx > 0:
             lines.append("       |")
@@ -214,11 +371,20 @@ def render_copy_paste_ascii(config: SwarmConfig, *, sanitize_pii: bool = True) -
         lines.append(f"+{'-' * inner}+")
         lines.append(f"| {_wrap_fixed_pure_ascii(head, inner - 2)} |")
         lines.append(f"+{'-' * inner}+")
-        lines.append(f"| {_wrap_fixed_pure_ascii(p_line, inner - 2)} |")
-        lines.append(f"| {_wrap_fixed_pure_ascii(g_line, inner - 2)} |")
+        for p_line in p_lines:
+            lines.append(f"| {p_line} |")
+        for g_line in g_lines:
+            lines.append(f"| {g_line} |")
         if agent.delegates_to:
-            routes_str = f"  * Routes  : ===> {', '.join(agent.delegates_to)}"
-            lines.append(f"| {_wrap_fixed_pure_ascii(routes_str, inner - 2)} |")
+            r_lines = _wrap_labeled_multiline(
+                "  * Routes  : ===> ",
+                ", ".join(agent.delegates_to),
+                inner - 2,
+                max_lines=2,
+                pure_ascii=True,
+            )
+            for r_line in r_lines:
+                lines.append(f"| {r_line} |")
         lines.append(f"+{'-' * inner}+")
 
     # Compact flow summary bar at bottom
@@ -228,13 +394,69 @@ def render_copy_paste_ascii(config: SwarmConfig, *, sanitize_pii: bool = True) -
         if a.delegates_to
     ]
     if edges:
-        flow_str = "FLOW: " + " | ".join(edges)
-        lines.append(f"| {_wrap_fixed_pure_ascii(flow_str, inner - 2)} |")
+        flow_lines = _wrap_labeled_multiline(
+            "FLOW: ",
+            " | ".join(edges),
+            inner - 2,
+            max_lines=2,
+            pure_ascii=True,
+        )
+        for fl in flow_lines:
+            lines.append(f"| {fl} |")
         lines.append(f"+{'-' * inner}+")
 
     footer = "[Shared via Hermes MySwarm Plugin]"
     lines.append(footer.rjust(width))
     return "\n".join(lines)
+
+
+def _classify_diagram_line_colors(raw_lines: List[str]) -> List[Tuple[str, Tuple[int, int, int]]]:
+    """Return (hex_color, rgb_tuple) for each line in an ASCII diagram, preserving Persona/Goal colors across wrapped continuation lines."""
+    cyan = ("#58f6ff", (0x58, 0xF6, 0xFF))
+    slate_white = ("#e2e8f0", (0xE2, 0xE8, 0xF0))
+    mint_green = ("#a7f3d0", (0xA7, 0xF3, 0xD0))
+    amber = ("#fbbf24", (0xFB, 0xBF, 0x24))
+    sky_blue = ("#38bdf8", (0x38, 0xBD, 0xF8))
+
+    results: List[Tuple[str, Tuple[int, int, int]]] = []
+    active_section: Optional[str] = None
+
+    for line in raw_lines:
+        stripped = line.strip()
+        if any(b in line for b in ("┌─", "├─", "└─", "+--", "+==")):
+            active_section = None
+            results.append(sky_blue)
+            continue
+        if "[ORCHESTRATOR]" in line or "MYSWARM //" in line or "MySwarm Topology:" in line:
+            active_section = None
+            results.append(cyan)
+            continue
+        if "Persona:" in line or "* Persona" in line:
+            active_section = "persona"
+            results.append(slate_white)
+            continue
+        if "Goal   :" in line or "* Goal" in line:
+            active_section = "goal"
+            results.append(mint_green)
+            continue
+        if "Routes :" in line or "* Routes" in line:
+            active_section = "routes"
+            results.append(amber if "===>" in line else sky_blue)
+            continue
+        if "──►" in line or "-->" in line or "===>" in line or "▼" in line:
+            active_section = None
+            results.append(amber)
+            continue
+        if active_section == "persona" and (stripped.startswith("│") or stripped.startswith("|")):
+            results.append(slate_white)
+            continue
+        if active_section == "goal" and (stripped.startswith("│") or stripped.startswith("|")):
+            results.append(mint_green)
+            continue
+        active_section = None
+        results.append(sky_blue)
+
+    return results
 
 
 def render_ascii_to_svg_image(
@@ -256,21 +478,11 @@ def render_ascii_to_svg_image(
     svg_w = int(max(max_cols * char_w + pad_x * 2, 520))
     svg_h = int(len(raw_lines) * line_h + pad_y + 28)
 
+    line_colors = _classify_diagram_line_colors(raw_lines)
     text_elements: List[str] = []
-    for idx, line in enumerate(raw_lines):
+    for idx, (line, (fill, _)) in enumerate(zip(raw_lines, line_colors)):
         y = pad_y + (idx + 1) * line_h
         escaped = html.escape(line)
-        # Highlight orchestrator and flow lines in cyan/amber, everything else in terminal green
-        if "[ORCHESTRATOR]" in line or "MYSWARM //" in line or "MySwarm Topology:" in line:
-            fill = "#58f6ff"
-        elif "Persona:" in line or "* Persona" in line:
-            fill = "#e2e8f0"
-        elif "Goal" in line:
-            fill = "#a7f3d0"
-        elif "──►" in line or "-->" in line or "===>" in line or "▼" in line:
-            fill = "#fbbf24"
-        else:
-            fill = "#38bdf8"
         text_elements.append(
             f'  <text x="{pad_x}" y="{y}" fill="{fill}" xml:space="preserve">{escaped}</text>'
         )
@@ -546,8 +758,8 @@ def render_ascii_to_png_image(
         _draw_char_cell(ch, title_start_x + idx * cell_w, 7, title_color)
 
     # Render diagram lines
-    for line_idx, line in enumerate(raw_lines):
-        color = _line_rgb_color(line)
+    line_colors = _classify_diagram_line_colors(raw_lines)
+    for line_idx, (line, (_, color)) in enumerate(zip(raw_lines, line_colors)):
         y0 = pad_top + line_idx * cell_h
         for col_idx, ch in enumerate(line):
             _draw_char_cell(ch, pad_x + col_idx * cell_w, y0, color)

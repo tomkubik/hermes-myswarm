@@ -115,15 +115,16 @@ def resolve_agents_file(path_or_dir: Optional[str | Path] = None) -> Tuple[Optio
     return None, workspace_dir
 
 
-def abbreviate_text(text: str, max_chars: int = 68) -> str:
+def abbreviate_text(text: str, max_chars: int = 220) -> str:
     """Collapse whitespace/markdown formatting and truncate cleanly at word boundaries."""
     cleaned = re.sub(r"\s+", " ", (text or "").strip())
     cleaned = re.sub(r"^[\-\*\•\>\#\s]+", "", cleaned)
     cleaned = cleaned.replace("**", "").replace("__", "").replace("`", "")
-    # Take first sentence if multiple sentences and first sentence is reasonably descriptive
-    first_sent = re.split(r"(?<=[.!?])\s+", cleaned, maxsplit=1)[0]
-    if 12 <= len(first_sent) <= max_chars:
-        cleaned = first_sent.rstrip(".")
+    # Only clip to first sentence when a short single-line summary is explicitly requested
+    if max_chars <= 80:
+        first_sent = re.split(r"(?<=[.!?])\s+", cleaned, maxsplit=1)[0]
+        if 12 <= len(first_sent) <= max_chars:
+            cleaned = first_sent.rstrip(".")
     if len(cleaned) <= max_chars:
         return cleaned.rstrip(".") if cleaned else "Unspecified"
     cut = cleaned[: max_chars - 1].rsplit(" ", 1)[0]
@@ -434,6 +435,7 @@ _ASCII_FIELD_RE = re.compile(
     r"^\|\s*\*\s*(Persona|Goal|Routes)\s*:\s*(?:===>\s*)?(.+?)\s*\|$",
     re.IGNORECASE,
 )
+_ASCII_CONT_RE = re.compile(r"^\|\s{6,}([^\|\*].*?)\s*\|$")
 
 
 def _parse_ascii_swarm_block(content: str) -> Optional[Tuple[str, List[AgentSpec]]]:
@@ -452,9 +454,10 @@ def _parse_ascii_swarm_block(content: str) -> Optional[Tuple[str, List[AgentSpec
     current_persona: str = ""
     current_goal: str = ""
     current_routes: List[str] = []
+    active_field: Optional[str] = None
 
     def _flush() -> None:
-        nonlocal current_name, current_role, current_persona, current_goal, current_routes
+        nonlocal current_name, current_role, current_persona, current_goal, current_routes, active_field
         if current_name:
             agents.append(
                 AgentSpec(
@@ -470,9 +473,13 @@ def _parse_ascii_swarm_block(content: str) -> Optional[Tuple[str, List[AgentSpec
         current_persona = ""
         current_goal = ""
         current_routes = []
+        active_field = None
 
     for raw_line in content.splitlines():
         line = raw_line.strip()
+        if line.startswith("+"):
+            active_field = None
+            continue
         hm = _ASCII_AGENT_HEAD_RE.match(line)
         if hm:
             _flush()
@@ -484,12 +491,26 @@ def _parse_ascii_swarm_block(content: str) -> Optional[Tuple[str, List[AgentSpec
         if fm and current_name:
             field_kind = fm.group(1).lower()
             val = fm.group(2).strip()
+            active_field = field_kind
             if field_kind == "persona":
                 current_persona = val
             elif field_kind == "goal":
                 current_goal = val
             elif field_kind == "routes":
                 current_routes = [x.strip() for x in val.split(",") if x.strip()]
+            continue
+
+        cm = _ASCII_CONT_RE.match(line)
+        if cm and current_name and active_field:
+            cont_val = cm.group(1).strip()
+            if cont_val:
+                if active_field == "persona":
+                    current_persona = f"{current_persona} {cont_val}".strip()
+                elif active_field == "goal":
+                    current_goal = f"{current_goal} {cont_val}".strip()
+                elif active_field == "routes":
+                    extra_routes = [x.strip() for x in cont_val.split(",") if x.strip()]
+                    current_routes.extend(extra_routes)
 
     _flush()
     if not agents:

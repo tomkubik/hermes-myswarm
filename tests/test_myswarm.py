@@ -225,6 +225,12 @@ class TestMySwarmPlugin(unittest.TestCase):
             self.assertTrue(res["copy_paste_code_block"].startswith("```text\n"))
             self.assertTrue(res["copy_paste_code_block"].endswith("\n```"))
 
+            # Verify full multi-line Persona and Goal descriptions appear without single-line truncation
+            self.assertIn("precision", diagram)
+            self.assertIn("right specialist", diagram)
+            self.assertIn("with precision", copy_paste)
+            self.assertIn("route tasks to the right specialist", copy_paste)
+
             # Verify PII from SAMPLE_AGENTS_MD is completely pruned from ASCII diagram, copy-paste block, and SVG
             for blob in (copy_paste, diagram, svg_text):
                 self.assertNotIn("jane.doe@acme-internal.org", blob)
