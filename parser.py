@@ -79,16 +79,25 @@ class SwarmConfig:
         }
 
 
-def resolve_agents_file(path_or_dir: Optional[str | Path] = None) -> Tuple[Optional[Path], Path]:
+def resolve_agents_file(
+    path_or_dir: Optional[str | Path] = None,
+    *,
+    allow_file: bool = True,
+) -> Tuple[Optional[Path], Path]:
     """Locate the active agents.md file in *path_or_dir* (preserving exact on-disk casing on macOS).
 
+    When ``allow_file=False``, *path_or_dir* must be a directory (file paths are rejected).
     Returns ``(resolved_file_or_None, workspace_dir)``.
     """
     target = Path(path_or_dir).expanduser().resolve() if path_or_dir else Path.cwd().resolve()
     if target.is_file():
+        if not allow_file:
+            raise ValueError(f"Target workspace path must be a directory, not a file: {target}")
         return target, target.parent
 
     workspace_dir = target
+    if workspace_dir.exists() and not workspace_dir.is_dir():
+        raise ValueError(f"Target workspace path is not a directory: {workspace_dir}")
     if not workspace_dir.is_dir():
         return None, workspace_dir
 

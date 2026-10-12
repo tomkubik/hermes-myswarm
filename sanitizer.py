@@ -10,14 +10,37 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
-    from .parser import AgentSpec, SwarmConfig, parse_agents_markdown, resolve_agents_file
+    from .backup_manager import _is_subpath, get_hermes_home_dir, get_myswarm_data_dir
+    from .parser import (
+        CANDIDATE_FILENAMES,
+        AgentSpec,
+        SwarmConfig,
+        parse_agents_markdown,
+        resolve_agents_file,
+    )
 except ImportError:
-    from parser import AgentSpec, SwarmConfig, parse_agents_markdown, resolve_agents_file
+    from backup_manager import _is_subpath, get_hermes_home_dir, get_myswarm_data_dir
+    from parser import (
+        CANDIDATE_FILENAMES,
+        AgentSpec,
+        SwarmConfig,
+        parse_agents_markdown,
+        resolve_agents_file,
+    )
 
 logger = logging.getLogger(__name__)
 
 EXPORT_HEADER_PREFIX = "<!-- Exported via Hermes MySwarm Plugin"
 _EXISTING_HEADER_RE = re.compile(r"^<!--\s*Exported via Hermes MySwarm Plugin[^>]*-->\s*\n?", re.IGNORECASE)
+_CANDIDATE_LOWER_SET = frozenset(c.lower() for c in CANDIDATE_FILENAMES)
+FORBIDDEN_EXPORT_FILENAMES = frozenset({
+    "agents.md",
+    "agents.override.md",
+    "claude.md",
+    "soul.md",
+    ".cursorrules",
+    ".cursorrules.md",
+})
 
 # Stage 1 deterministic PII regex patterns
 _EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b")
@@ -262,24 +285,65 @@ def export_sanitized_agents_file(
     llm: Optional[Any] = None,
     use_llm_scrubber: bool = True,
 ) -> SanitizationResult:
-    """Read the active agents.md, scrub PII, write to *output_path* (.md), and return the result."""
+    """Read the active agents.md, run best-effort PII scrubbing, write to *output_path* (.md), and return the result."""
     src_file, workspace_dir = resolve_agents_file(source_path)
     if src_file is None or not src_file.is_file():
         raise FileNotFoundError(
             f"No agents.md (or AGENTS.md / AGENTS.override.md) found in {workspace_dir}"
         )
+    if src_file.name.lower() not in _CANDIDATE_LOWER_SET:
+        raise ValueError(
+            f"Export source_path must be one of {CANDIDATE_FILENAMES}, got: {src_file.name}"
+        )
+
+    cwd_root = Path.cwd().resolve()
+    hermes_home = get_hermes_home_dir()
+    allowed_exports_dir = (hermes_home / "plugin-data" / "myswarm" / "exports").resolve()
+    data_exports_dir = (get_myswarm_data_dir() / "exports").resolve()
 
     if output_path:
-        dest = Path(output_path).expanduser()
-        if not dest.is_absolute():
-            dest = (workspace_dir / dest).resolve()
-        else:
-            dest = dest.resolve()
+        raw_dest = Path(output_path).expanduser()
+        if raw_dest.name.lower() in FORBIDDEN_EXPORT_FILENAMES:
+            raise ValueError(
+                f"Refusing to export to reserved configuration filename '{raw_dest.name}'."
+            )
+        base_dir = workspace_dir if _is_subpath(workspace_dir, cwd_root) else cwd_root
+        dest = (base_dir / raw_dest).resolve() if not raw_dest.is_absolute() else raw_dest.resolve()
     else:
-        dest = (workspace_dir / default_filename).resolve()
+        base_dir = workspace_dir if _is_subpath(workspace_dir, cwd_root) else cwd_root
+        dest = (base_dir / default_filename).resolve()
+
+    if dest.name.lower() in FORBIDDEN_EXPORT_FILENAMES:
+        raise ValueError(
+            f"Refusing to export to reserved configuration filename '{dest.name}'."
+        )
 
     if dest.suffix.lower() != ".md":
         dest = dest.with_suffix(".md")
+
+    if dest.name.lower() in FORBIDDEN_EXPORT_FILENAMES:
+        raise ValueError(
+            f"Refusing to export to reserved configuration filename '{dest.name}'."
+        )
+
+    # Refuse any destination under HERMES_HOME unless it is inside HERMES_HOME/plugin-data/myswarm/exports/
+    if _is_subpath(dest, hermes_home) and not (
+        _is_subpath(dest, allowed_exports_dir) or _is_subpath(dest, data_exports_dir)
+    ):
+        raise ValueError(
+            f"Refusing to write export inside HERMES_HOME ({hermes_home}) outside plugin-data/myswarm/exports/."
+        )
+
+    # Confine output to cwd or HERMES_HOME/plugin-data/myswarm/exports/
+    if not (
+        _is_subpath(dest, cwd_root)
+        or _is_subpath(dest, allowed_exports_dir)
+        or _is_subpath(dest, data_exports_dir)
+    ):
+        raise ValueError(
+            f"Export destination ({dest}) must be inside the current working directory ({cwd_root}) "
+            f"or {allowed_exports_dir}."
+        )
 
     # Never overwrite the live agents.md file during export
     if dest.resolve() == src_file.resolve():

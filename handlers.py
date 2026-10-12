@@ -10,7 +10,10 @@ from typing import Any, List, Optional
 
 try:
     from .backup_manager import (
+        _is_subpath,
         get_backup_status,
+        get_hermes_home_dir,
+        get_myswarm_data_dir,
         import_shared_agents_file,
         revert_to_original_agents_file,
     )
@@ -25,7 +28,10 @@ try:
     )
 except ImportError:
     from backup_manager import (
+        _is_subpath,
         get_backup_status,
+        get_hermes_home_dir,
+        get_myswarm_data_dir,
         import_shared_agents_file,
         revert_to_original_agents_file,
     )
@@ -83,6 +89,103 @@ def _get_config_str(key: str, default: str = "", ctx: Optional[Any] = None) -> s
     return default
 
 
+def _resolve_confined_ascii_image_base(
+    image_output_path: Optional[str | Path],
+    workspace_dir: Path,
+) -> Path:
+    """Confine ASCII .svg/.png image outputs under cwd or HERMES_HOME/plugin-data/myswarm/."""
+    cwd_root = Path.cwd().resolve()
+    hermes_home = get_hermes_home_dir()
+    plugin_data = get_myswarm_data_dir().resolve()
+    allowed_hermes_plugin_dir = (hermes_home / "plugin-data" / "myswarm").resolve()
+
+    default_dir = workspace_dir.resolve() if _is_subpath(workspace_dir, cwd_root) else cwd_root
+    if image_output_path:
+        raw = Path(image_output_path).expanduser()
+        base_img = (default_dir / raw).resolve() if not raw.is_absolute() else raw.resolve()
+    else:
+        base_img = (default_dir / "myswarm-ascii.svg").resolve()
+
+    if _is_subpath(base_img, hermes_home) and not (
+        _is_subpath(base_img, plugin_data) or _is_subpath(base_img, allowed_hermes_plugin_dir)
+    ):
+        raise ValueError(
+            f"Refusing to write ASCII image inside HERMES_HOME ({hermes_home}) outside plugin-data/myswarm/."
+        )
+    if not (
+        _is_subpath(base_img, cwd_root)
+        or _is_subpath(base_img, plugin_data)
+        or _is_subpath(base_img, allowed_hermes_plugin_dir)
+    ):
+        raise ValueError(
+            f"ASCII image output path ({base_img}) must be inside the current working directory ({cwd_root}) "
+            f"or {allowed_hermes_plugin_dir}."
+        )
+    return base_img
+
+
+def pre_tool_call_hook(*args: Any, **kwargs: Any) -> Optional[ dict ]:
+    """Hermes `pre_tool_call` hook requiring human approval before myswarm_import (non-preview) or myswarm_revert."""
+    tool_name: Optional[str] = kwargs.get("tool_name") or kwargs.get("name")
+    tool_args: Any = (
+        kwargs.get("args")
+        if "args" in kwargs
+        else kwargs.get("tool_args", kwargs.get("arguments"))
+    )
+
+    if args:
+        if isinstance(args[0], dict) and tool_name is None:
+            payload = args[0]
+            tool_name = payload.get("tool_name") or payload.get("name")
+            tool_args = (
+                payload.get("args")
+                if "args" in payload
+                else payload.get("tool_args", payload.get("arguments", {}))
+            )
+        elif isinstance(args[0], str):
+            tool_name = args[0]
+            if len(args) > 1 and tool_args is None:
+                tool_args = args[1]
+
+    if isinstance(tool_args, str):
+        try:
+            tool_args = json.loads(tool_args)
+        except Exception:
+            tool_args = {}
+    if not isinstance(tool_args, dict):
+        tool_args = {}
+
+    if tool_name == "myswarm_import":
+        if bool(tool_args.get("preview_only", False)):
+            return None
+        source = str(tool_args.get("source_file") or "<shared-file>")
+        try:
+            existing, ws_dir = resolve_agents_file(tool_args.get("workspace_dir"), allow_file=False)
+            target = str(existing if existing is not None else (ws_dir / "agents.md"))
+        except Exception:
+            target = str(Path.cwd().resolve() / "agents.md")
+        return {
+            "action": "approve",
+            "message": f"myswarm: overwrite {target} with {source}",
+        }
+
+    if tool_name == "myswarm_revert":
+        try:
+            status = get_backup_status(tool_args.get("workspace_dir"))
+            ws_dir = Path(status["workspace_dir"])
+            target = status.get("active_agents_file") or str(ws_dir / (status.get("original_filename") or "agents.md"))
+            source = f"preserved original ({status.get('original_filename') or 'agents.md'})"
+        except Exception:
+            target = str(Path.cwd().resolve() / "agents.md")
+            source = "preserved original backup"
+        return {
+            "action": "approve",
+            "message": f"myswarm: overwrite {target} with {source}",
+        }
+
+    return None
+
+
 def myswarm_list(args: dict, **kwargs: Any) -> str:
     """Handler for myswarm_list tool: output abbreviated list of agents, personas, and goals."""
     try:
@@ -90,7 +193,11 @@ def myswarm_list(args: dict, **kwargs: Any) -> str:
         use_llm = bool((args or {}).get("use_llm", True))
         cfg = load_swarm_config(path, llm=_get_llm() if use_llm else None, use_llm_fallback=use_llm)
         formatted = format_abbreviated_list(cfg)
-        backup = get_backup_status(path)
+        try:
+            backup = get_backup_status(cfg.source_path and Path(cfg.source_path).parent or None)
+            active_import = backup["active_import"]
+        except Exception:
+            active_import = False
         return json.dumps(
             {
                 "ok": True,
@@ -99,7 +206,7 @@ def myswarm_list(args: dict, **kwargs: Any) -> str:
                 "agent_count": len(cfg.agents),
                 "agents": [a.to_dict() for a in cfg.agents],
                 "formatted_list": formatted,
-                "active_import": backup["active_import"],
+                "active_import": active_import,
             },
             ensure_ascii=False,
         )
@@ -109,8 +216,9 @@ def myswarm_list(args: dict, **kwargs: Any) -> str:
 
 SHARING_HINT = (
     "Sharing Tip: You can share your ASCII code and/or your exported .md file (/myswarm export). "
-    "The ASCII code is great for a quick visual preview and lightweight starter config (abbreviated 1-line "
-    "personas/goals + routing), while the .md file is more comprehensive and preserves full agent instructions."
+    "The ASCII code is great for a quick visual preview and lightweight starter config (abbreviated "
+    "personas/goals + routing), while the .md file is more comprehensive and preserves full agent instructions. "
+    "Note: PII pruning works on a best-effort basis—ultimately you are responsible for reviewing any files or snippets before sharing."
 )
 
 
@@ -122,6 +230,7 @@ def myswarm_ascii(args: dict, **kwargs: Any) -> str:
         image_output_path = (args or {}).get("image_output_path")
 
         _resolved_file, workspace_dir = resolve_agents_file(path)
+        base_img = _resolve_confined_ascii_image_base(image_output_path, workspace_dir)
         cfg, san_result = load_sanitized_swarm_config(
             path,
             llm=_get_llm(),
@@ -132,7 +241,6 @@ def myswarm_ascii(args: dict, **kwargs: Any) -> str:
         copy_paste = render_copy_paste_ascii(cfg, sanitize_pii=True)
         copy_paste_block = f"```text\n{copy_paste}\n```"
 
-        base_img = Path(image_output_path).expanduser().resolve() if image_output_path else (workspace_dir / "myswarm-ascii.svg")
         svg_target = base_img.with_suffix(".svg")
         png_target = base_img.with_suffix(".png")
         img_title = f"MySwarm ASCII Topology — {cfg.title}"
@@ -204,7 +312,7 @@ def myswarm_visualize_image(args: dict, **kwargs: Any) -> str:
 
 
 def myswarm_export(args: dict, **kwargs: Any) -> str:
-    """Handler for myswarm_export tool: sanitize PII from agents.md and export to a .md file."""
+    """Handler for myswarm_export tool: run best-effort PII scrubbing on agents.md and export to a .md file."""
     try:
         output_path = (args or {}).get("output_path")
         source_path = (args or {}).get("source_path")
@@ -236,20 +344,21 @@ def myswarm_export(args: dict, **kwargs: Any) -> str:
 
 
 def myswarm_import(args: dict, **kwargs: Any) -> str:
-    """Handler for myswarm_import tool: display file contents, check for exploits/security risks (.md or ASCII), and import."""
+    """Handler for myswarm_import tool: display file contents, run best-effort security check (.md or ASCII), and import."""
     try:
         source_file = (args or {}).get("source_file")
         if not source_file:
             return json.dumps({"ok": False, "error": "Missing required parameter: 'source_file'"})
         workspace_dir = (args or {}).get("workspace_dir")
         preview_only = bool((args or {}).get("preview_only", False))
-        allow_suspicious = bool((args or {}).get("allow_suspicious", False))
+        # Model tool calls cannot bypass the security audit (allow_suspicious is always False here)
         res = import_shared_agents_file(
             source_file,
             workspace_dir=workspace_dir,
             llm=_get_llm(),
             preview_only=preview_only,
-            allow_suspicious=allow_suspicious,
+            allow_suspicious=False,
+            confine_to_cwd=True,
         )
         return json.dumps(res, ensure_ascii=False)
     except Exception as exc:
@@ -260,21 +369,21 @@ def myswarm_revert(args: dict, **kwargs: Any) -> str:
     """Handler for myswarm_revert tool: revert to the preserved original agents.md."""
     try:
         workspace_dir = (args or {}).get("workspace_dir")
-        res = revert_to_original_agents_file(workspace_dir=workspace_dir)
+        res = revert_to_original_agents_file(workspace_dir=workspace_dir, confine_to_cwd=True)
         return json.dumps(res, ensure_ascii=False)
     except Exception as exc:
         return json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False)
 
 
 SLASH_HELP = """\
-/myswarm — Discover, visualize, export, and test community agents.md configs
+/myswarm — Discover, visualize, export (best-effort PII pruning), and test community agents.md configs
 
 Subcommands:
   /myswarm list [path]                  Abbreviated list of agents, personas, and goals
   /myswarm ascii [path]                 ASCII images (.svg & .png) + copy-paste ASCII symbols code block
   /myswarm image [theme]                Generate an image of your swarm (e.g. sci-fi, cyberpunk, or auto)
-  /myswarm export [output.md]           Export sanitized agents.md with MySwarm Plugin header
-  /myswarm import [--preview] <file>    Display file contents, run security/exploit check (.md or ASCII), & import
+  /myswarm export [output.md]           Export agents.md with best-effort PII pruning & MySwarm header
+  /myswarm import [--preview] <file>    Display file contents, run best-effort security check (.md or ASCII), & import
   /myswarm revert                       Revert back to your original agents.md
   /myswarm status                       Show active agents.md and backup/revert status
 """
@@ -291,7 +400,7 @@ def _format_import_screen_output(res: dict) -> str:
         (res.get("displayed_file_contents") or "").rstrip(),
         "```",
         "",
-        "=== SECURITY & EXPLOIT AUDIT (Markdown & ASCII Inspector) ===",
+        "=== BEST-EFFORT SECURITY & EXPLOIT AUDIT (Markdown & ASCII Inspector) ===",
         f"  Format Inspected : {audit.get('format_inspected', res.get('imported_format', 'unknown'))}",
         f"  Security Verdict : {str(audit.get('verdict', 'unknown')).upper()} (Risk Level: {audit.get('risk_level', 'none')})",
         f"  Audit Summary    : {audit.get('summary', '')}",
@@ -353,6 +462,7 @@ def handle_slash_command(raw_args: str, ctx: Optional[Any] = None) -> str:
             paths = [r for r in rest if not r.startswith("-")]
             path = paths[0] if paths else None
             _resolved_file, workspace_dir = resolve_agents_file(path)
+            base_img = _resolve_confined_ascii_image_base(None, workspace_dir)
             cfg, san_result = load_sanitized_swarm_config(
                 path,
                 llm=_get_llm(active_ctx),
@@ -364,12 +474,12 @@ def handle_slash_command(raw_args: str, ctx: Optional[Any] = None) -> str:
             img_title = f"MySwarm ASCII Topology — {cfg.title}"
             svg_path = render_ascii_to_svg_image(
                 diagram,
-                workspace_dir / "myswarm-ascii.svg",
+                base_img.with_suffix(".svg"),
                 title=img_title,
             )
             png_path = render_ascii_to_png_image(
                 diagram,
-                workspace_dir / "myswarm-ascii.png",
+                base_img.with_suffix(".png"),
                 title=img_title,
             )
             return (

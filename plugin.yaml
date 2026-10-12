@@ -2,7 +2,7 @@ name: myswarm
 version: 1.0.0
 manifest_version: 2
 api_version: 1
-description: "Discover, visualize (ASCII & AI-generated themed images), sanitize/export, and safely test/revert community agents.md swarm configurations."
+description: "Discover, visualize (ASCII & AI-generated themed images), export (with best-effort PII pruning), and import/revert community agents.md swarm configurations with human approval."
 author: "MySwarm Contributors"
 license: MIT
 tags:
@@ -18,6 +18,8 @@ provides_tools:
   - myswarm_export
   - myswarm_import
   - myswarm_revert
+provides_hooks:
+  - pre_tool_call
 config_schema:
   default_theme:
     type: str
